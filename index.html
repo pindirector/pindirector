@@ -147,9 +147,17 @@ input[type=range]::-moz-range-track{background:transparent}
 
     <div class="sensor">
       <button class="btn" id="btnZero">영점 보정</button>
-      <button class="btn fill" id="btnMeasure">센서로 경사 측정</button>
+      <button class="btn fill" id="btnMeasure">센서로 실시간 측정</button>
     </div>
     <div class="status" id="sensorStatus">평평한 곳에서 영점 보정 후 그린에서 측정하세요. (선택 기능)</div>
+    <div class="card" id="liveBox" style="display:none;margin:0 0 12px;text-align:center">
+      <div style="font-size:.75rem;color:var(--muted);font-weight:700">실시간 경사 (폰 아래 한 지점)</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="flex:1"><div style="font-size:.72rem;color:var(--muted)">앞뒤 (오르막/내리막)</div><div id="liveAlong" style="font-size:1.4rem;font-weight:900;color:var(--primary)">-</div></div>
+        <div style="flex:1"><div style="font-size:.72rem;color:var(--muted)">좌우 (사이드)</div><div id="liveSide" style="font-size:1.4rem;font-weight:900;color:var(--primary)">-</div></div>
+      </div>
+      <button class="btn fill" id="btnLock" style="width:100%;margin-top:10px">이 값으로 입력</button>
+    </div>
 
     <div class="input-group">
       <label>그린 스피드 (스팀프, m)</label>
@@ -629,7 +637,45 @@ async function runSensor(kind) {
   calculate();
 }
 $('btnZero').addEventListener('click', () => runSensor('zero'));
-$('btnMeasure').addEventListener('click', () => runSensor('measure'));
+const live = { on: false, has: false, b: 0, g: 0, p: 0, r: 0, h: null, raf: 0 };
+function liveRender() {
+  live.raf = 0; if (!live.has) return;
+  const sign = $('invSensor').checked ? -1 : 1;
+  live.p = (live.b - sensor.zb) * sign; live.r = (live.g - sensor.zg) * sign;
+  const ap = Math.abs(Math.tan(live.p * Math.PI / 180) * 100), sp = Math.abs(Math.tan(live.r * Math.PI / 180) * 100);
+  $('liveAlong').textContent = ap < 0.05 ? '평지' : (live.p >= 0 ? '오르막 ' : '내리막 ') + ap.toFixed(1) + '%';
+  $('liveSide').textContent = sp < 0.05 ? '평지' : (live.r >= 0 ? '왼쪽 높음 ' : '오른쪽 높음 ') + sp.toFixed(1) + '%';
+}
+function liveStop() {
+  if (live.h) window.removeEventListener('deviceorientation', live.h);
+  live.h = null; live.on = false; live.has = false;
+  $('liveBox').style.display = 'none'; $('btnMeasure').textContent = '센서로 실시간 측정';
+}
+async function liveStart() {
+  const st = $('sensorStatus');
+  if (!(await askPermission())) { st.textContent = '센서 권한이 필요합니다. (HTTPS 주소에서 사용하세요)'; return; }
+  live.has = false;
+  live.h = e => {
+    if (e.beta == null || e.gamma == null) return;
+    if (!live.has) { live.b = e.beta; live.g = e.gamma; live.has = true; }
+    else { live.b += (e.beta - live.b) * 0.2; live.g += (e.gamma - live.g) * 0.2; }
+    if (!live.raf) live.raf = requestAnimationFrame(liveRender);
+  };
+  window.addEventListener('deviceorientation', live.h);
+  live.on = true; $('liveBox').style.display = 'block'; $('btnMeasure').textContent = '측정 중지';
+  st.textContent = '폰을 그린에 놓고 값이 안정되면 "이 값으로 입력"을 누르세요.';
+  setTimeout(() => { if (live.on && !live.has) { st.textContent = '센서 값을 읽을 수 없습니다. (지원 안 되거나 HTTPS가 아닐 수 있습니다)'; liveStop(); } }, 2500);
+}
+$('btnMeasure').addEventListener('click', () => live.on ? liveStop() : liveStart());
+$('btnLock').addEventListener('click', () => {
+  if (!live.has) return;
+  const ap = Math.abs(Math.tan(live.p * Math.PI / 180) * 100), sp = Math.abs(Math.tan(live.r * Math.PI / 180) * 100);
+  $('alongDir').value = live.p >= 0 ? 'up' : 'down'; $('alongPct').value = ap.toFixed(1);
+  $('sideDir').value = live.r >= 0 ? 'left' : 'right'; $('sidePct').value = sp.toFixed(1);
+  $('sensorStatus').textContent = `입력 완료 · ${live.p >= 0 ? '오르막' : '내리막'} ${ap.toFixed(1)}% / ${live.r >= 0 ? '왼쪽' : '오른쪽'}이 높음 ${sp.toFixed(1)}%`;
+  calculate();
+});
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { if (t.dataset.tab !== 'green' && live.on) liveStop(); }));
 
 /* ---------------- 탭 ---------------- */
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
