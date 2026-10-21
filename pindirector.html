@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pin Director 그린 리딩 · 템포 연습</title>
+<style>
+:root{
+  --primary:#2e7d32; --primary-dark:#1b5e20; --bg:#f2f4f2; --card:#fff;
+  --text:#2b2b2b; --muted:#666; --accent:#ff9800; --light:#e8f5e9; --line:#dcdcdc;
+}
+*{box-sizing:border-box}
+body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,Roboto,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:16px;display:flex;justify-content:center}
+.container{max-width:480px;width:100%;background:var(--card);border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.1);padding:20px}
+.header{text-align:center;margin-bottom:14px}
+.header img{display:block;width:100%;max-width:340px;height:auto;margin:0 auto}
+.header h1{margin:0;font-size:1.4rem;color:var(--primary)}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:1;padding:12px 4px;white-space:nowrap;border:none;border-radius:10px;background:#eee;font-size:1rem;font-weight:700;color:var(--muted);cursor:pointer}
+.tab.active{background:var(--primary);color:#fff}
+.panel{display:none}.panel.active{display:block}
+.instruction{background:var(--light);color:var(--primary);padding:12px;border-radius:8px;font-size:.9rem;text-align:center;margin-bottom:14px;font-weight:500}
+.sensor{display:flex;gap:8px;margin-bottom:6px}
+.sensor button{flex:1}
+.status{font-size:.8rem;color:var(--muted);text-align:center;min-height:1.1em;margin-bottom:12px}
+button.btn{padding:12px;border:1px solid var(--primary);background:#fff;color:var(--primary);border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer}
+button.btn.fill{background:var(--primary);color:#fff}
+.input-group{margin-bottom:14px}
+.input-group label{display:block;font-size:.9rem;font-weight:600;margin-bottom:6px;color:var(--muted)}
+select,input[type=number]{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:1rem;background:#fafafa}
+.row{display:flex;gap:10px}.row .input-group{flex:1}
+.sec{font-size:.85rem;font-weight:700;color:var(--primary);margin:6px 0 8px}
+details{margin:4px 0 14px;font-size:.9rem}
+summary{cursor:pointer;color:var(--muted);font-weight:600;padding:6px 0}
+input[type=range]{width:100%}
+.result{background:var(--primary);color:#fff;padding:18px;border-radius:12px;margin-top:8px}
+.result h2{margin:0 0 10px;font-size:1.1rem;text-align:center}
+.ritem{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.2)}
+.ritem:last-of-type{border-bottom:none}
+.rl{font-size:.95rem;opacity:.9}
+.rv{font-size:1.35rem;font-weight:700;color:var(--accent);text-align:right}
+.rv small{display:block;font-size:.75rem;font-weight:500;color:#fff;opacity:.8}
+.mini{display:flex;gap:8px;margin-top:10px}
+.mini div{flex:1;background:rgba(255,255,255,.12);border-radius:8px;padding:8px 4px;text-align:center;font-size:.75rem}
+.mini b{display:block;font-size:1rem;color:#fff;margin-top:2px}
+.tip{margin-top:12px;font-size:.85rem;text-align:center;opacity:.92;line-height:1.45}
+.warn{margin-top:10px;background:#fff3e0;color:#b45309;border-radius:8px;padding:8px 10px;font-size:.82rem;display:none;line-height:1.4}
+.card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:14px}
+.card h3{margin:0 0 8px;font-size:.95rem;color:var(--primary)}
+.cap{font-size:.72rem;color:var(--muted);text-align:center;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:8px 4px;text-align:center;border-bottom:1px solid #eee}
+th{color:var(--muted);font-weight:600}
+tr.sel td{background:var(--light);font-weight:700;color:var(--primary-dark)}
+.note{font-size:.74rem;color:#888;line-height:1.5;margin-top:12px}
+.footer{margin-top:24px;text-align:center;font-size:.8rem;color:#999;line-height:1.5}
+/* tempo */
+canvas{width:100%;height:230px;background:#e8f3e8;border-radius:12px;display:block}
+.dots{display:flex;justify-content:center;gap:18px;margin:10px 0}
+.dot{width:46px;height:46px;border-radius:50%;background:#e0e0e0;color:#888;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;transition:background .06s,transform .06s}
+.dot.on{background:var(--accent);color:#fff;transform:scale(1.12)}
+.bar{display:flex;height:16px;border-radius:8px;overflow:hidden;position:relative;margin:6px 0 4px}
+.bar span{display:block}
+.b0{background:#d8ddd8}.b1{background:#5c9ee6}.b2{background:var(--primary)}.b3{background:#cfd8cf}
+.playhead{position:absolute;top:-2px;bottom:-2px;width:3px;background:#222;left:0}
+.timing{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted)}
+.startbtn{width:100%;padding:16px;margin-top:12px;font-size:1.1rem;border:none;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;cursor:pointer}
+.startbtn.run{background:#c62828}
+.val{float:right;color:var(--text);font-weight:700}
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:.95rem;font-weight:700;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--primary);border-color:var(--primary);color:#fff}
+#aTbl tr.sel td{background:var(--light);color:var(--primary);font-weight:700}
+#aTbl td:first-child,#aTbl th:first-child{text-align:left}
+.crlab{display:block;font-size:.85rem;color:var(--muted);font-weight:600;margin:12px 0 6px}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.chips button,.seg.two button{padding:10px 4px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:.9rem;font-weight:700;color:var(--muted);cursor:pointer}
+.chips button.on{background:#fff4dc;border-color:#e0a21b;color:#a86a00}
+.seg.two button small{display:block;font-size:.68rem;font-weight:500;margin-top:2px;opacity:.85}
+.seg.two button.on{background:#e6f0ff;border-color:#3b82f6;color:#1d4ed8}
+.recbtn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:.88rem;cursor:pointer}
+.recbtn.on{border-color:#e0a21b;background:#fff4dc}
+.recbtn b{color:var(--primary)}
+.recbtn small{color:#888}
+#crBar{display:flex;height:34px;border-radius:8px;overflow:hidden;background:#eee;margin-top:6px}
+#crBar div{height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;transition:width .4s}
+#crBc{background:linear-gradient(90deg,#2563eb,#60a5fa);color:#fff}
+#crBr{background:linear-gradient(90deg,#10b981,#34d399);color:#064e3b}
+.crwarn{font-size:.75rem;padding:8px 10px;border-radius:8px;margin-top:8px;line-height:1.45}
+.crwarn.dn{color:#b42318;background:#fef3f2;border:1px solid #fecdca}
+.crwarn.up{color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe}
+/* ===== Pin Director UI 테마: 딥그린 · 골드 · 실버 ===== */
+:root{--primary:#0a4a35;--primary-dark:#06352a;--gold:#c9a227;--gold-l:#ecd27a;--accent:#d4a72c;--light:#eef5ef;--line:#d5dad5;--bg:#f3f5f2}
+body{background:linear-gradient(180deg,#fbfcfa 0%,#eef1ec 100%);min-height:100vh}
+.container{background:transparent;box-shadow:none;padding:4px 0 8px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.tab{padding:8px 4px;min-height:52px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;line-height:1.25;font-size:.78rem;font-weight:800;color:#3a3f3b;border:2px solid #c3c7ca;border-radius:12px;background:linear-gradient(180deg,#fcfcfc,#dcdee0);box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(0,0,0,.12)}
+.tab.active{color:#fff6d6;border-color:var(--gold);background:linear-gradient(180deg,#0f5d42,#06352a);box-shadow:0 3px 8px rgba(6,53,42,.35),inset 0 0 0 1px rgba(255,255,255,.12)}
+.panel{background:#fff;border-radius:18px;box-shadow:0 6px 20px rgba(8,50,35,.15);overflow:hidden}
+.phead{background:linear-gradient(180deg,#0f5d42,#06352a);color:#fff;text-align:center;font-weight:800;font-size:1.05rem;letter-spacing:.02em;padding:15px 12px;border-bottom:3px solid var(--gold)}
+.pbody{padding:16px}
+.instruction{background:var(--light);border:1px solid #d3e4d6;color:var(--primary);border-radius:12px}
+button.btn,button.btn.fill{border:2px solid var(--gold);background:linear-gradient(180deg,#0f5d42,#06352a);color:#fff6d6;border-radius:12px;box-shadow:0 2px 6px rgba(6,53,42,.3);font-weight:700}
+button.btn:active{transform:translateY(1px)}
+.startbtn{border:2px solid var(--gold);background:linear-gradient(180deg,#0f5d42,#06352a);color:#fff6d6;border-radius:14px;box-shadow:0 3px 8px rgba(6,53,42,.35);letter-spacing:.04em}
+.startbtn.run{background:linear-gradient(180deg,#b3261e,#74130e);color:#fff}
+select,input[type=number]{border:1px solid #c9d2c9;border-radius:10px;background:#fff}
+.input-group label,.crlab{color:#3b443d}
+.seg button,.chips button,.seg.two button{border:1px solid #c3c7ca;border-radius:10px;background:linear-gradient(180deg,#fdfdfd,#e6e8e8);color:#3b443d;box-shadow:inset 0 1px 0 #fff}
+.seg button.on,.chips button.on,.seg.two button.on{color:#fff6d6;border:2px solid var(--gold);background:linear-gradient(180deg,#0f5d42,#06352a);box-shadow:0 2px 5px rgba(6,53,42,.3)}
+.card{border:1px solid #e1e6e1;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.card h3{color:var(--primary)}
+th{color:var(--primary)}
+tr.sel td,#aTbl tr.sel td{background:var(--light);color:var(--primary);font-weight:800}
+.result{background:linear-gradient(160deg,#0f5d42,#06352a);border:2px solid var(--gold);border-radius:14px}
+.rv{color:#f2d675}
+.dot.on{background:linear-gradient(180deg,#f2d675,#c9a227);color:#3d2f00}
+.b1{background:#d9b94a}.b2{background:var(--primary)}
+#crBc{background:linear-gradient(90deg,#c9a227,#ecd27a);color:#4a3a00}
+#crBr{background:linear-gradient(90deg,#0f5d42,#2f9e6b);color:#fff}
+.crwarn.up{color:var(--primary);background:#eef5ef;border-color:#cfe3d3}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;margin:10px 0;border-radius:6px;outline:none;background:linear-gradient(90deg,#0a4a35 0,#0a4a35 var(--p,50%),#dde2dd var(--p,50%),#dde2dd 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0,#d4af37 55%,#9a7a12);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0,#d4af37 55%,#9a7a12);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
+input[type=range]::-moz-range-track{background:transparent}
+.header img{mix-blend-mode:multiply}
+.footer .copy{margin-top:6px;font-size:.72rem;color:#aaa}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<style>.sitenav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;margin:0 0 12px;font:700 13px "Pretendard","Noto Sans KR",system-ui,sans-serif}.sitenav a{color:#0a4a35;text-decoration:none;padding:7px 12px;border:1px solid #c3c7ca;border-radius:999px;background:linear-gradient(180deg,#fdfdfd,#e6e8e8)}.sitenav a.home{color:#fff6d6;border:2px solid #c9a227;background:linear-gradient(180deg,#0f5d42,#06352a)}.sitenav a:focus-visible{outline:2px solid #c9a227;outline-offset:2px}[hidden]{display:none!important}</style>
+<div class="container">
+<nav class="sitenav" aria-label="사이트 메뉴"><a class="home" href="index.html">← Pin Director 홈</a><a href="aimpoint.html">에임포인트 계산기 →</a></nav>
+  <div class="header">
+    <img class="logo" id="logoGreen" alt="Pin Director" src="logo.webp">
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="green">그린 리딩 계산기</button>
+    <button class="tab" data-tab="tempo">숏게임 템포 연습기</button>
+    <button class="tab" data-tab="carry">캐리:런 계산기</button>
+  </div>
+
+  <!-- ===================== 그린 리딩 ===================== -->
+  <div id="panel-green" class="panel active">
+    <div class="phead">그린 리딩 계산기</div>
+    <div class="pbody">
+    <div class="instruction">📱 스마트폰 머리 부분을 홀컵 방향으로 향하게 하여 그린 바닥에 낮게 놓으세요.</div>
+
+    <div class="sensor">
+      <button class="btn" id="btnZero">영점 보정</button>
+      <button class="btn fill" id="btnMeasure">센서로 실시간 측정</button>
+    </div>
+    <div class="status" id="sensorStatus">평평한 곳에서 영점 보정 후 그린에서 측정하세요. (선택 기능)</div>
+    <div class="card" id="liveBox" style="display:none;margin:0 0 12px;text-align:center">
+      <div style="font-size:.75rem;color:var(--muted);font-weight:700">실시간 경사 (폰 아래 한 지점)</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="flex:1"><div style="font-size:.72rem;color:var(--muted)">앞뒤 (오르막/내리막)</div><div id="liveAlong" style="font-size:1.4rem;font-weight:900;color:var(--primary)">-</div></div>
+        <div style="flex:1"><div style="font-size:.72rem;color:var(--muted)">좌우 (사이드)</div><div id="liveSide" style="font-size:1.4rem;font-weight:900;color:var(--primary)">-</div></div>
+      </div>
+      <button class="btn fill" id="btnLock" style="width:100%;margin-top:10px">이 값으로 입력</button>
+    </div>
+
+    <div class="input-group">
+      <label>그린 스피드 (스팀프, m)</label>
+      <select id="greenSpeed">
+        <option value="2.0">2.0 (느림)</option>
+        <option value="2.2">2.2</option>
+        <option value="2.4">2.4</option>
+        <option value="2.5">2.5 (보통)</option>
+        <option value="2.7" selected>2.7 (약간 빠름 - 표준)</option>
+        <option value="3.0">3.0 (매우 빠름)</option>
+        <option value="3.2">3.2 (초고속)</option>
+        <option value="3.4">3.4 (극고속)</option>
+        <option value="3.6">3.6 (초극고속)</option>
+        <option value="3.8">3.8 (광속)</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label>직선 거리 (m)</label>
+      <input type="number" id="distance" placeholder="예: 5" step="0.1" min="0" inputmode="decimal">
+    </div>
+
+    <div class="sec">① 오르막 / 내리막 (공→홀컵 방향 경사)</div>
+    <div class="cap" style="text-align:left;margin:-4px 0 8px">앞 3분의 1 구간과 뒤 3분의 2 구간 중 경사가 더 큰 쪽의 값을 입력하세요.</div>
+    <div class="seg two" id="alongUnit" style="margin-bottom:10px">
+      <button type="button" data-u="pct" class="on">경사도 (%)<small>그린 리딩·센서 기준</small></button>
+      <button type="button" data-u="cm">높이 차 (cm)<small>골프존 방식 · 공↔홀컵</small></button>
+    </div>
+    <div class="row">
+      <div class="input-group">
+        <label>방향</label>
+        <select id="alongDir"><option value="up">오르막 (+)</option><option value="down">내리막 (-)</option></select>
+      </div>
+      <div class="input-group">
+        <div id="alongPctBox">
+          <label>경사도 (%)</label>
+          <input type="number" id="alongPct" placeholder="예: 2" step="0.1" min="0" inputmode="decimal">
+        </div>
+        <div id="alongCmBox" hidden>
+          <label>높이 차 (cm)</label>
+          <input type="number" id="alongCm" placeholder="예: 15" step="1" min="0" inputmode="decimal">
+        </div>
+      </div>
+    </div>
+    <div class="cap" id="alongConv" style="text-align:left;margin:-6px 0 12px;font-size:.8rem"></div>
+
+    <div class="sec">② 사이드 경사 (좌/우)</div>
+    <div class="cap" style="text-align:left;margin:-4px 0 8px">앞 3분의 1 구간과 뒤 3분의 2 구간 중 경사가 더 큰 쪽의 값을 입력하세요.</div>
+    <div class="row">
+      <div class="input-group">
+        <label>높은 쪽</label>
+        <select id="sideDir">
+          <option value="left">왼쪽이 높음</option>
+          <option value="right">오른쪽이 높음</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>경사도 (%)</label>
+        <input type="number" id="sidePct" placeholder="예: 1.5" step="0.1" min="0" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>공략 스타일 (홀컵을 지나 멈추는 거리)</label>
+      <select id="paceSel">
+        <option value="0.15">라이업 (약 15cm) · 브레이크 큼</option>
+        <option value="0.40" selected>표준 (약 40cm)</option>
+        <option value="0.80">공격적 (약 80cm) · 브레이크 작음</option>
+      </select>
+    </div>
+
+    <details>
+      <summary>고급 설정</summary>
+      <div class="input-group">
+        <label>브레이크 보정 계수 <span class="val" id="calVal">1.00</span></label>
+        <input type="range" id="calK" min="0.7" max="1.4" step="0.05" value="1.0">
+        <div class="cap" style="text-align:left">실제 라운드에서 결과가 크게/작게 느껴지면 조정하세요. (젖은 그린·잔디 결 등 반영)</div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:.9rem">
+        <input type="checkbox" id="invSensor"> 센서 방향이 반대로 나오면 체크 (부호 반전)
+      </label>
+    </details>
+
+    <div class="result">
+      <h2>🎯 공략 가이드</h2>
+      <div class="ritem">
+        <span class="rl">타겟 거리<br><small style="opacity:.75">(평지 환산 강도)</small></span>
+        <span class="rv" id="resDistance">0 m</span>
+      </div>
+      <div class="ritem">
+        <span class="rl">에임 (측면 겨냥)</span>
+        <span class="rv" id="resAim">-<small id="resAimSub"></small></span>
+      </div>
+      <div class="mini">
+        <div>백스윙 크기<b id="resStroke">-</b></div>
+        <div>공 굴러가는 시간<b id="resTime">-</b></div>
+        <div>출발 공 속도<b id="resSpeed">-</b></div>
+      </div>
+      <div class="tip" id="tipMessage">거리와 경사도를 입력하면 공략 가이드가 표시됩니다.</div>
+      <div class="warn" id="warnBox"></div>
+    </div>
+
+    <div class="card" id="diagramCard" style="display:none">
+      <h3>예측 라인</h3>
+      <div id="diagram"></div>
+      <div class="cap">위에서 본 그림 · 좌우 폭은 보기 좋게 확대되어 있습니다.<br>점선 = 출발 방향(에임), 실선 = 공의 예상 경로</div>
+    </div>
+
+    <div class="card" id="compareCard" style="display:none">
+      <h3>공략 스타일별 비교</h3>
+      <table>
+        <thead><tr><th>스타일</th><th>타겟 거리</th><th>에임</th></tr></thead>
+        <tbody id="compareBody"></tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      ※ 이 계산기는 스팀프 측정 원리(경사 0%에서의 구름 감속)와 구르는 공의 경사 가속(5/7·g·sinθ)을 이용한 물리 모델입니다.
+      AimPoint, Tour Putt, 골프존, 트랙맨 등의 비공개 알고리즘·데이터를 그대로 사용한 것이 아니며, 실제 그린의 잔디 결·습도·울퉁불퉁함은 반영되지 않습니다.
+      경사도는 공~홀 사이를 앞 <b>3분의 1</b>과 뒤 <b>3분의 2</b> 구간으로 나누어, 그중 <b>더 큰 경사</b>를 입력하세요.
+    </div>
+    </div>
+  </div>
+
+  <!-- ===================== 템포 연습 ===================== -->
+  <div id="panel-tempo" class="panel">
+    <div class="phead">숏게임 템포 연습기</div>
+    <div class="pbody">
+    <div class="seg" id="tMode"><button data-m="putt" class="on">⛳ 퍼팅</button><button data-m="app">🏌️ 어프로치</button></div>
+    <div class="instruction" id="tInstr">백스트로크 : 포워드 = <b>2 : 1</b> 리듬<br>거리가 바뀌어도 템포는 그대로, 스트로크 크기만 바꿉니다.</div>
+
+    <canvas id="tCanvas"></canvas>
+    <div class="dots">
+      <div class="dot" id="d0">레디</div>
+      <div class="dot" id="d1">탑</div>
+      <div class="dot" id="d2">임팩트</div>
+    </div>
+    <div class="bar" id="tBar">
+      <span class="b0" id="barLead"></span><span class="b1" id="barBack"></span><span class="b2" id="barFwd"></span><span class="b3" id="barRest"></span>
+      <div class="playhead" id="playhead"></div>
+    </div>
+    <div class="timing"><span id="tLeadTxt">레디 0.8초 정지</span><span id="tBackTxt">백 0.67초</span><span id="tFwdTxt">포워드 0.33초</span><span id="tRestTxt">쉼 1.5초</span></div>
+
+    <button class="startbtn" id="tStart">▶ 시작</button>
+
+    <div style="margin-top:16px">
+      <div class="input-group" id="gApp" style="display:none">
+        <label>스윙 크기 (백스윙 높이)</label>
+        <select id="aSize">
+          <option value="0">7시 30분 (짧은 피치)</option>
+          <option value="1" selected>9시 (하프 스윙)</option>
+          <option value="2">10시 30분 (큰 스윙)</option>
+        </select>
+        <label style="margin-top:12px">템포 속도 <span class="val" id="aSpeedVal">-</span></label>
+        <input type="range" id="aSpeed" min="0" max="100" step="5" value="50">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#888"><span>느리게</span><span>빠르게</span></div>
+        <div class="card" style="margin-top:12px">
+          <h3>스윙 크기별 템포 기준</h3>
+          <table id="aTbl">
+            <thead><tr><th>스윙 크기</th><th>백스윙</th><th>다운스윙</th><th>비율</th></tr></thead>
+            <tbody>
+              <tr data-i="0"><td>7시 30분</td><td>0.45~0.65초</td><td>0.22~0.32초</td><td>약 2:1</td></tr>
+              <tr data-i="1"><td>9시</td><td>0.55~0.75초</td><td>0.25~0.38초</td><td>약 2:1</td></tr>
+              <tr data-i="2"><td>10시 30분</td><td>0.65~0.90초</td><td>0.28~0.42초</td><td>약 2:1</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="input-group" id="gRatio">
+        <label>템포 비율 (백 : 포워드)</label>
+        <select id="tRatio">
+          <option value="2" selected>2 : 1 (퍼팅 표준)</option>
+          <option value="3">3 : 1 (여유 있는 백스트로크)</option>
+          <option value="1.5">3 : 2</option>
+          <option value="1">1 : 1</option>
+        </select>
+      </div>
+      <div class="input-group" id="gTotal">
+        <label>스트로크 시간 (백+포워드) <span class="val" id="tTotalVal">1.00초</span></label>
+        <input type="range" id="tTotal" min="0.6" max="1.6" step="0.05" value="1.0">
+      </div>
+      <div class="input-group">
+        <label>다음 스트로크까지 쉬는 시간 <span class="val" id="tRestVal">1.5초</span></label>
+        <input type="range" id="tRest" min="0.5" max="4" step="0.5" value="1.5">
+      </div>
+      <div class="input-group" id="gSize">
+        <label>백스윙 크기 <span class="val" id="tSizeVal">25 cm</span></label>
+        <input type="range" id="tSize" min="5" max="40" step="1" value="25">
+        <button class="btn" style="width:100%;margin-top:8px" id="tApply">그린 리딩 결과의 백스윙 크기 반영</button>
+      </div>
+      <div class="row">
+        <div class="input-group">
+          <label>소리</label>
+          <select id="tSound">
+            <option value="three" selected>3박 (레디·탑·임팩트)</option>
+            <option value="impact">임팩트만</option>
+            <option value="mute">무음 (화면만)</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>음색</label>
+          <select id="tTimbre">
+            <option value="piano" selected>피아노</option>
+            <option value="tone">부드러운 톤</option>
+            <option value="click">클릭</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>볼륨 <span class="val" id="tVolVal">70%</span></label>
+        <input type="range" id="tVol" min="0" max="100" step="5" value="70">
+      </div>
+    </div>
+
+    <div class="note">
+      ※ 약 1초 안팎에서 시작해 본인 리듬에 맞게 조절하세요.
+      레디에서는 퍼터가 정지해 있고, 이어서 백스트로크가 <b>탑</b>까지 올라간 뒤 <b>임팩트</b>로 내려옵니다. 소리는 레디 → 탑 → 임팩트 순서로 납니다. 무음 모드에서는 화면의 흔들림만 보고 연습할 수 있습니다.
+    </div>
+    </div>
+  </div>
+
+  <div id="panel-carry" class="panel">
+    <div class="phead">캐리:런 계산기</div>
+    <div class="pbody">
+    <div class="instruction">어프로치 <b>캐리 : 런</b> 계산기<br>클럽별 캐리와 런, 총 비거리를 확인하세요.</div>
+
+    <div id="crFwd">
+      <label class="crlab">어프로치 타입 (캐리)</label>
+      <div class="seg two" id="crType">
+        <button data-c="3">캐리 3m 툭!<small>스핀 최소 구간</small></button>
+        <button data-c="5" class="on">캐리 5m 샷!<small>표준 스핀 구간</small></button>
+      </div>
+      <label class="crlab">클럽 선택</label>
+      <div class="chips" id="crClubs"></div>
+    </div>
+
+    <label class="crlab">타겟 지점 경사도 <span class="val" id="crSlopeVal">평지 0%</span></label>
+    <input type="range" id="crSlope" min="-5" max="5" step="1" value="0">
+    <div style="display:flex;justify-content:space-between;font-size:.7rem;color:#888;margin:2px 0 12px"><span>내리막 5%</span><span>평지</span><span>오르막 5%</span></div>
+    <div id="crWarn"></div>
+
+    <div class="input-group" style="margin-top:12px">
+      <label>그린 스피드 (스팀프) <span class="val" id="crGreenVal"></span></label>
+      <select id="crGreen"></select>
+    </div>
+
+    <div class="card" style="background:#fafcfa">
+      <div style="text-align:center">
+        <div style="font-size:.75rem;color:var(--muted);font-weight:700">최종 예상 총 비거리</div>
+        <div><span id="crTotal" style="font-size:2.4rem;font-weight:900;color:var(--primary)">10.0</span><span style="font-weight:700;color:var(--muted)"> m</span></div>
+        <div id="crSel" style="font-size:.8rem;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.85rem;font-weight:700;margin-top:8px">
+        <span style="color:#b8901a">● 캐리 <span id="crCarry">5.0</span>m</span>
+        <span style="color:#0f5d42">● 런 <span id="crRun">5.0</span>m</span>
+      </div>
+      <div id="crBar"><div id="crBc" style="width:50%">CARRY</div><div id="crBr" style="width:50%">RUN</div></div>
+    </div>
+
+    <div class="note">
+      ※ 한국숏게임골프협회 기준표(스팀프 2.7 기준)를 바탕으로 한 간이 계산입니다. 그린 스피드에 비례해 런을 보정하며, 잔디 상태·공 라이·바람에 따라 실제 런은 달라질 수 있습니다.
+    </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p style="margin:0">제작: 한국숏게임골프협회</p>
+    <p style="margin:4px 0 0">개발자: KPGA Class A 권두욱 프로</p>
+    <p class="copy">© PIN DIRECTOR. All Rights Reserved.</p>
+  </div>
+</div>
+
+<script>
+/*PHYS_START*/
+const G = 9.81, V0 = 1.83, K58 = 5 / 7, CUP = 0.108;
+
+// 한 번의 퍼트를 시뮬레이션. v: 초속(m/s), phi: 출발 각도(rad, +는 오른쪽)
+function simulate(P, v, phi) {
+  let x = 0, y = 0, vx = v * Math.sin(phi), vy = v * Math.cos(phi), t = 0;
+  const dt = 0.004, path = [[0, 0]];
+  let xAtD = null, tAtD = null, vAtD = null, n = 0;
+  while (t < 25) {
+    const sp = Math.hypot(vx, vy);
+    if (sp < 0.03) break;
+    const ax = -P.aFlat * vx / sp + P.aX;
+    const ay = -P.aFlat * vy / sp + P.aY;
+    vx += ax * dt; vy += ay * dt;
+    const py = y;
+    x += vx * dt; y += vy * dt; t += dt; n++;
+    if (xAtD === null && py < P.D && y >= P.D) {
+      const f = (P.D - py) / (y - py);
+      xAtD = x - vx * dt * (1 - f); tAtD = t - dt * (1 - f); vAtD = Math.hypot(vx, vy);
+    }
+    if (n % 5 === 0) path.push([x, y]);
+    if (y > P.D + 4 || y < -1) break;
+  }
+  path.push([x, y]);
+  const crossed = xAtD !== null;
+  return { xAtD: crossed ? xAtD : x, tAtD: crossed ? tAtD : t, vAtD: vAtD || 0, crossed, path, stopX: x, stopY: y };
+}
+
+function buildParams(inp) {
+  const aFlat = V0 * V0 / (2 * inp.speed);
+  const aAlong = K58 * G * Math.sin(Math.atan(inp.alongPct / 100)) * inp.cal;
+  const aSide = K58 * G * Math.sin(Math.atan(inp.sidePct / 100)) * inp.cal;
+  const up = inp.alongDir === 'up';
+  return {
+    D: inp.D, aFlat,
+    aY: up ? -aAlong : aAlong,
+    aX: inp.sideDir === 'left' ? aSide : -aSide,
+    aEff: up ? aFlat + aAlong : Math.max(aFlat - aAlong, 0.12 * aFlat),
+    rawEff: up ? aFlat + aAlong : aFlat - aAlong,
+    aAlong, aSide
+  };
+}
+
+function solve(inp, over) {
+  const P = buildParams(inp);
+  const v = Math.sqrt(2 * P.aEff * (P.D + over));
+  let lo = -0.7, hi = 0.7;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (simulate(P, v, mid).xAtD > 0) hi = mid; else lo = mid;
+  }
+  const phi = (lo + hi) / 2;
+  const sim = simulate(P, v, phi);
+  const dEq = Math.max(0, (P.D + over) * P.aEff / P.aFlat - over);
+  const vRef = Math.sqrt(2 * P.aFlat * (5 + 0.4));
+  return { v, phi, aimOff: P.D * Math.tan(phi), dEq, T: sim.tAtD, sim, over, strokePct: v / vRef * 100, P };
+}
+/*PHYS_END*/
+
+const $ = id => document.getElementById(id);
+
+function fmtCups(off) {
+  const a = Math.abs(off);
+  return { cups: a / CUP, cm: a * 100 };
+}
+
+function readInputs() {
+  return {
+    speed: parseFloat($('greenSpeed').value) || 2.7,
+    D: parseFloat($('distance').value) || 0,
+    alongDir: $('alongDir').value,
+    alongPct: Math.max(0, parseFloat($('alongPct').value) || 0),
+    sideDir: $('sideDir').value,
+    sidePct: Math.max(0, parseFloat($('sidePct').value) || 0),
+    cal: parseFloat($('calK').value) || 1
+  };
+}
+
+let lastStrokePct = 100;
+const SIZE_REF_CM = 25;   // 5m 퍼트 백스윙 = 25cm (기준값)
+
+function calculate() {
+  $('calVal').textContent = (parseFloat($('calK').value)).toFixed(2);
+  const inp = readInputs();
+  const warn = $('warnBox');
+  warn.style.display = 'none';
+  if (inp.D <= 0) {
+    $('resDistance').textContent = '0 m';
+    $('resAim').innerHTML = '-<small id="resAimSub"></small>';
+    $('resStroke').textContent = $('resTime').textContent = $('resSpeed').textContent = '-';
+    $('tipMessage').textContent = '거리와 경사도를 입력하면 공략 가이드가 표시됩니다.';
+    $('diagramCard').style.display = 'none';
+    $('compareCard').style.display = 'none';
+    return;
+  }
+
+  const overSel = parseFloat($('paceSel').value);
+  const res = solve(inp, overSel);
+  lastStrokePct = res.strokePct;
+
+  $('resDistance').textContent = res.dEq.toFixed(1) + ' m';
+  const c = fmtCups(res.aimOff);
+  if (c.cups < 0.15) {
+    $('resAim').innerHTML = '스트레이트<small id="resAimSub">사이드 경사 없음/미미</small>';
+  } else {
+    const side = res.aimOff < 0 ? '← 왼쪽' : '오른쪽 →';
+    $('resAim').innerHTML = `${side} ${c.cups.toFixed(1)} 컵<small id="resAimSub">홀컵 중심에서 약 ${c.cm.toFixed(0)}cm</small>`;
+  }
+  $('resStroke').textContent = Math.round(SIZE_REF_CM * res.strokePct / 100) + ' cm';
+  $('resTime').textContent = res.T.toFixed(1) + '초';
+  $('resSpeed').textContent = res.v.toFixed(1) + ' m/s';
+
+  // 팁
+  let tip = '2:1 퍼팅 템포를 유지하며 자신 있게 스트로크 하세요!';
+  if (inp.alongDir === 'down' && inp.alongPct > 3) tip = '심한 내리막입니다. 터치감에 집중하여 부드럽게 스트로크 하세요.';
+  else if (c.cups >= 4) tip = '브레이크가 큽니다. 에임 포인트를 정하고 그 지점에 공을 출발시키는 데 집중하세요.';
+  else if (inp.alongDir === 'up' && inp.alongPct >= 3) tip = '오르막은 짧게 끝나기 쉽습니다. 백스트로크를 충분히 가져가세요.';
+  $('tipMessage').textContent = tip;
+
+  // 경고
+  const msgs = [];
+  if (res.P.rawEff <= 0.2 * res.P.aFlat) msgs.push('내리막 경사가 매우 커서 공이 쉽게 멈추지 않을 수 있습니다. 라이업 공략을 권장합니다.');
+  if (inp.alongPct + inp.sidePct > 6) msgs.push('경사가 매우 큽니다. 실제 라인은 오차가 커질 수 있으니 여유 있게 공략하세요.');
+  if (inp.D > 15) msgs.push('장거리 퍼트는 경사가 구간마다 달라 오차가 커집니다. 구간별 평균 경사를 입력하세요.');
+  if (!res.sim.crossed) msgs.push('이 조건에서는 공이 홀컵 거리에 못 미칠 수 있습니다.');
+  if (msgs.length) { warn.innerHTML = msgs.join('<br>'); warn.style.display = 'block'; }
+
+  drawDiagram(res, inp.D);
+  buildCompare(inp, overSel);
+}
+
+function buildCompare(inp, sel) {
+  const rows = [['라이업', 0.15], ['표준', 0.40], ['공격적', 0.80]];
+  $('compareBody').innerHTML = rows.map(([n, o]) => {
+    const r = solve(inp, o);
+    const c = fmtCups(r.aimOff);
+    const aim = c.cups < 0.15 ? '스트레이트' : `${r.aimOff < 0 ? '왼쪽' : '오른쪽'} ${c.cups.toFixed(1)}컵`;
+    return `<tr class="${Math.abs(o - sel) < 1e-6 ? 'sel' : ''}"><td>${n}</td><td>${r.dEq.toFixed(1)} m</td><td>${aim}</td></tr>`;
+  }).join('');
+  $('compareCard').style.display = 'block';
+}
+
+function drawDiagram(res, D) {
+  const W = 300, H = 360, padT = 36, padB = 36, cx = W / 2;
+  const yMaxM = D + 0.8;
+  const ys = (H - padT - padB) / yMaxM;
+  const pts = res.sim.path.filter(p => p[1] <= yMaxM);
+  const maxX = Math.max(0.2, Math.abs(res.aimOff), ...pts.map(p => Math.abs(p[0])));
+  const xs = Math.min(110 / (maxX * 1.15), ys * 6);
+  const X = m => (cx + m * xs).toFixed(1), Y = m => (H - padB - m * ys).toFixed(1);
+  const holeY = Y(D);
+  const poly = pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ');
+  const aimX = X(res.aimOff);
+  const hasBreak = Math.abs(res.aimOff) > 0.02;
+  const svg = `
+<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#e8f3e8"/>
+  <line x1="${cx}" y1="${Y(0)}" x2="${cx}" y2="${holeY}" stroke="#9bbf9b" stroke-width="1"/>
+  <line x1="${cx}" y1="${Y(0)}" x2="${aimX}" y2="${holeY}" stroke="#ff9800" stroke-width="2" stroke-dasharray="5 4"/>
+  <polyline points="${poly}" fill="none" stroke="#2e7d32" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="${cx}" cy="${holeY}" r="7" fill="#1b1b1b"/>
+  ${hasBreak ? `<circle cx="${aimX}" cy="${holeY}" r="5" fill="#ff9800" stroke="#fff" stroke-width="1.5"/>
+  <text x="${aimX}" y="${(parseFloat(holeY) - 12).toFixed(1)}" font-size="11" text-anchor="middle" fill="#b45309" font-weight="700">에임</text>` : ''}
+  <text x="${cx}" y="${(parseFloat(holeY) + 22).toFixed(1)}" font-size="11" text-anchor="middle" fill="#333">홀컵 ${D.toFixed(1)}m</text>
+  <circle cx="${cx}" cy="${Y(0)}" r="6" fill="#fff" stroke="#555" stroke-width="1.5"/>
+  <text x="12" y="20" font-size="11" fill="#777">◀ 좌</text>
+  <text x="${W - 12}" y="20" font-size="11" fill="#777" text-anchor="end">우 ▶</text>
+</svg>`;
+  $('diagram').innerHTML = svg;
+  $('diagramCard').style.display = 'block';
+}
+
+/* ---------------- 높이 차 ↔ 경사도 환산 ---------------- */
+let alongUnit = 'pct';
+function curD() { return parseFloat($('distance').value) || 0; }
+function syncAlong(from) {
+  const D = curD();
+  if (from === 'cm') {
+    const cm = parseFloat($('alongCm').value);
+    $('alongPct').value = (D > 0 && !isNaN(cm)) ? (cm / D).toFixed(2) : '';
+  } else {
+    const pct = parseFloat($('alongPct').value);
+    $('alongCm').value = (D > 0 && !isNaN(pct)) ? (pct * D).toFixed(1) : '';
+  }
+  showAlongConv();
+}
+function showAlongConv() {
+  const D = curD(), pct = parseFloat($('alongPct').value), box = $('alongConv');
+  if (!(D > 0) || isNaN(pct) || pct === 0) {
+    box.textContent = alongUnit === 'cm' ? '거리를 먼저 입력하면 높이 차를 경사도(%)로 바꿔 계산합니다.' : '';
+    return;
+  }
+  const cm = pct * D, dir = $('alongDir').value === 'up' ? '오르막' : '내리막';
+  box.textContent = `${dir} ${pct.toFixed(1)}% = 높이 차 ${cm.toFixed(0)}cm (${D.toFixed(1)}m 기준 · 경사도 = 높이 차 ÷ 거리)`;
+}
+document.querySelectorAll('#alongUnit button').forEach(b => b.addEventListener('click', () => {
+  alongUnit = b.dataset.u;
+  document.querySelectorAll('#alongUnit button').forEach(x => x.classList.toggle('on', x === b));
+  $('alongPctBox').hidden = alongUnit !== 'pct';
+  $('alongCmBox').hidden = alongUnit !== 'cm';
+  syncAlong(alongUnit === 'cm' ? 'pct' : 'cm');
+  syncAlong(alongUnit);
+  calculate();
+}));
+$('alongCm').addEventListener('input', () => { syncAlong('cm'); calculate(); });
+$('alongPct').addEventListener('input', () => syncAlong('pct'));
+$('distance').addEventListener('input', () => syncAlong(alongUnit === 'cm' ? 'cm' : 'pct'), true);
+$('alongDir').addEventListener('change', showAlongConv);
+
+['greenSpeed', 'alongDir', 'sideDir', 'paceSel'].forEach(id => $(id).addEventListener('change', calculate));
+['distance', 'alongPct', 'sidePct', 'calK'].forEach(id => $(id).addEventListener('input', calculate));
+
+/* ---------------- 센서 측정 ---------------- */
+const sensor = { zb: 0, zg: 0 };
+const avg = a => a.reduce((s, v) => s + v, 0) / a.length;
+
+async function askPermission() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try { return (await DeviceOrientationEvent.requestPermission()) === 'granted'; } catch (e) { return false; }
+  }
+  return true;
+}
+function sample(ms) {
+  return new Promise(resolve => {
+    const b = [], g = [];
+    const h = e => { if (e.beta != null && e.gamma != null) { b.push(e.beta); g.push(e.gamma); } };
+    window.addEventListener('deviceorientation', h);
+    setTimeout(() => { window.removeEventListener('deviceorientation', h); resolve(b.length ? { beta: avg(b), gamma: avg(g) } : null); }, ms);
+  });
+}
+async function runSensor(kind) {
+  const st = $('sensorStatus');
+  if (!(await askPermission())) { st.textContent = '센서 권한이 필요합니다. (HTTPS 주소에서 사용하세요)'; return; }
+  st.textContent = '측정 중… 폰을 움직이지 말고 1초간 유지하세요.';
+  const s = await sample(1200);
+  if (!s) { st.textContent = '센서 값을 읽을 수 없습니다. (지원 안 되거나 HTTPS가 아닐 수 있습니다)'; return; }
+  if (kind === 'zero') {
+    sensor.zb = s.beta; sensor.zg = s.gamma;
+    st.textContent = '영점 보정 완료. 이제 그린에서 측정하세요.';
+    return;
+  }
+  const sign = $('invSensor').checked ? -1 : 1;
+  const pitch = (s.beta - sensor.zb) * sign;
+  const roll = (s.gamma - sensor.zg) * sign;
+  const alongP = Math.abs(Math.tan(pitch * Math.PI / 180) * 100);
+  const sideP = Math.abs(Math.tan(roll * Math.PI / 180) * 100);
+  $('alongDir').value = pitch >= 0 ? 'up' : 'down';
+  $('alongPct').value = alongP.toFixed(1);
+  syncAlong('pct');
+  $('sideDir').value = roll >= 0 ? 'left' : 'right';
+  $('sidePct').value = sideP.toFixed(1);
+  st.textContent = `측정 완료 · ${pitch >= 0 ? '오르막' : '내리막'} ${alongP.toFixed(1)}% / ${roll >= 0 ? '왼쪽' : '오른쪽'}이 높음 ${sideP.toFixed(1)}%  (폰 아래 한 지점의 경사입니다)`;
+  calculate();
+}
+$('btnZero').addEventListener('click', () => runSensor('zero'));
+const live = { on: false, has: false, b: 0, g: 0, p: 0, r: 0, h: null, raf: 0 };
+function liveRender() {
+  live.raf = 0; if (!live.has) return;
+  const sign = $('invSensor').checked ? -1 : 1;
+  live.p = (live.b - sensor.zb) * sign; live.r = (live.g - sensor.zg) * sign;
+  const ap = Math.abs(Math.tan(live.p * Math.PI / 180) * 100), sp = Math.abs(Math.tan(live.r * Math.PI / 180) * 100);
+  $('liveAlong').textContent = ap < 0.05 ? '평지' : (live.p >= 0 ? '오르막 ' : '내리막 ') + ap.toFixed(1) + '%';
+  $('liveSide').textContent = sp < 0.05 ? '평지' : (live.r >= 0 ? '왼쪽 높음 ' : '오른쪽 높음 ') + sp.toFixed(1) + '%';
+}
+function liveStop() {
+  if (live.h) window.removeEventListener('deviceorientation', live.h);
+  live.h = null; live.on = false; live.has = false;
+  $('liveBox').style.display = 'none'; $('btnMeasure').textContent = '센서로 실시간 측정';
+}
+async function liveStart() {
+  const st = $('sensorStatus');
+  if (!(await askPermission())) { st.textContent = '센서 권한이 필요합니다. (HTTPS 주소에서 사용하세요)'; return; }
+  live.has = false;
+  live.h = e => {
+    if (e.beta == null || e.gamma == null) return;
+    if (!live.has) { live.b = e.beta; live.g = e.gamma; live.has = true; }
+    else { live.b += (e.beta - live.b) * 0.2; live.g += (e.gamma - live.g) * 0.2; }
+    if (!live.raf) live.raf = requestAnimationFrame(liveRender);
+  };
+  window.addEventListener('deviceorientation', live.h);
+  live.on = true; $('liveBox').style.display = 'block'; $('btnMeasure').textContent = '측정 중지';
+  st.textContent = '폰을 그린에 놓고 값이 안정되면 "이 값으로 입력"을 누르세요.';
+  setTimeout(() => { if (live.on && !live.has) { st.textContent = '센서 값을 읽을 수 없습니다. (지원 안 되거나 HTTPS가 아닐 수 있습니다)'; liveStop(); } }, 2500);
+}
+$('btnMeasure').addEventListener('click', () => live.on ? liveStop() : liveStart());
+$('btnLock').addEventListener('click', () => {
+  if (!live.has) return;
+  const ap = Math.abs(Math.tan(live.p * Math.PI / 180) * 100), sp = Math.abs(Math.tan(live.r * Math.PI / 180) * 100);
+  $('alongDir').value = live.p >= 0 ? 'up' : 'down'; $('alongPct').value = ap.toFixed(1); syncAlong('pct');
+  $('sideDir').value = live.r >= 0 ? 'left' : 'right'; $('sidePct').value = sp.toFixed(1);
+  $('sensorStatus').textContent = `입력 완료 · ${live.p >= 0 ? '오르막' : '내리막'} ${ap.toFixed(1)}% / ${live.r >= 0 ? '왼쪽' : '오른쪽'}이 높음 ${sp.toFixed(1)}%`;
+  calculate();
+});
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { if (t.dataset.tab !== 'green' && live.on) liveStop(); }));
+
+/* ---------------- 탭 ---------------- */
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === b));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  $('panel-' + b.dataset.tab).classList.add('active');
+  if (b.dataset.tab !== 'tempo') stopTempo();
+  else { updateTempoUI(); }
+}));
+
+/* ---------------- 템포 연습 ---------------- */
+let ac = null, running = false, anchor = 0, kIdx = 0, timer = null, raf = null;
+
+const READY_HOLD = 0.8;   // 레디: 퍼터가 정지해 있는 시간(초)
+
+let tMode = 'putt';
+const APP = [
+  { name: '7시 30분', deg: 45,  b: [0.45, 0.65], f: [0.22, 0.32] },
+  { name: '9시',      deg: 90,  b: [0.55, 0.75], f: [0.25, 0.38] },
+  { name: '10시 30분', deg: 135, b: [0.65, 0.90], f: [0.28, 0.42] }
+];
+function tParams() {
+  if (tMode === 'app') {
+    const a = APP[+$('aSize').value], k = +$('aSpeed').value / 100, rest = parseFloat($('tRest').value);
+    const back = a.b[0] + (a.b[1] - a.b[0]) * k, fwd = a.f[0] + (a.f[1] - a.f[0]) * k;
+    return { total: back + fwd, back, fwd, rest, lead: READY_HOLD, cycle: READY_HOLD + back + fwd + rest };
+  }
+  const total = parseFloat($('tTotal').value), rb = parseFloat($('tRatio').value), rest = parseFloat($('tRest').value);
+  const back = total * rb / (rb + 1);
+  return { total, back, fwd: total - back, rest, lead: READY_HOLD, cycle: READY_HOLD + total + rest };
+}
+
+function updateTempoUI() {
+  const P = tParams();
+  $('tTotalVal').textContent = P.total.toFixed(2) + '초';
+  $('tRestVal').textContent = P.rest.toFixed(1) + '초';
+  $('tSizeVal').textContent = $('tSize').value + ' cm';
+  $('tVolVal').textContent = $('tVol').value + '%';
+  $('tLeadTxt').textContent = '레디 ' + P.lead.toFixed(1) + '초 정지';
+  $('barLead').style.flex = P.lead;
+  const app = tMode === 'app';
+  $('tBackTxt').textContent = (app ? '백스윙 ' : '백 ') + P.back.toFixed(2) + '초';
+  $('tFwdTxt').textContent = (app ? '다운스윙 ' : '포워드 ') + P.fwd.toFixed(2) + '초';
+  $('aSpeedVal').textContent = P.back.toFixed(2) + ' / ' + P.fwd.toFixed(2) + '초';
+  document.querySelectorAll('#aTbl tbody tr').forEach(r => r.classList.toggle('sel', r.dataset.i === $('aSize').value));
+  $('tRestTxt').textContent = '쉼 ' + P.rest.toFixed(1) + '초';
+  $('barBack').style.flex = P.back;
+  $('barFwd').style.flex = P.fwd;
+  $('barRest').style.flex = P.rest;
+  if (!running) drawTempo();
+  if (typeof refreshRanges === 'function') refreshRanges();
+}
+
+function beep(time, freq, vol, dur, type) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), time + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  o.connect(g); g.connect(ac.destination);
+  o.start(time); o.stop(time + dur + 0.03);
+}
+
+/* 피아노 음색 (저음 · 리듬감): 배음 합성 + 해머 어택 + 로우패스.
+   accent(0~1)가 클수록 더 깊고 묵직하게 울립니다. (임팩트 = 가장 강한 박) */
+function pianoNote(time, freq, vol, accent) {
+  const out = ac.createGain(), lp = ac.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = Math.min(3200, freq * 9); lp.Q.value = 0.6;   // 따뜻한 저음 톤
+  out.gain.value = Math.max(0.0002, vol);
+  out.connect(lp); lp.connect(ac.destination);
+  const ds = 0.5 + 0.4 * accent;                      // 감쇠 길이: 약박은 짧게, 강박은 길게
+  // [배음 번호, 상대 음량, 감쇠 시간(초)]
+  const partials = [[1, 1.0, 1.1 * ds], [2, 0.6, 0.8 * ds], [3, 0.3, 0.5 * ds], [4, 0.14, 0.3 * ds], [5, 0.07, 0.2 * ds], [6, 0.03, 0.15 * ds]];
+  partials.forEach(([k, a, d]) => {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq * k * (1 + 0.0004 * k * k);   // 미세한 비조화성 (피아노 현의 특성)
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(a / 2, time + 0.003);    // 해머 어택(빠르게 → 또렷한 리듬)
+    g.gain.exponentialRampToValueAtTime(0.0001, time + d);
+    o.connect(g); g.connect(out);
+    o.start(time); o.stop(time + d + 0.05);
+  });
+  if (accent > 0.5) {                                  // 강박: 낮은 "쿵" 하는 해머 울림 추가
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(freq * 0.5, time);
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(0.55, time + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
+    o.connect(g); g.connect(out);
+    o.start(time); o.stop(time + 0.22);
+  }
+}
+
+function playBeats(s, P) {
+  const mode = $('tSound').value;
+  if (mode === 'mute') return;
+  const vol = parseFloat($('tVol').value) / 100 * 0.6;
+  if ($('tTimbre').value === 'piano') {
+    // 저음 피아노, 도→미→솔로 이어지며 올라가는 3박: 레디 C4 · 탑 E4 · 임팩트 G4 (+ 바로 이어지는 C5로 마무리)
+    const pf = [261.63, 329.63, 392.0];
+    const tImp = s + P.lead + P.back + P.fwd;
+    if (mode === 'three') {
+      pianoNote(s, pf[0], vol * 0.75, 0.2);
+      pianoNote(s + P.lead + P.back, pf[1], vol * 0.95, 0.5);
+    }
+    pianoNote(tImp, pf[2], vol * 1.2, 1);              // 임팩트: 가장 높은 박 + 묵직한 울림
+    pianoNote(tImp + 0.11, 523.25, vol * 0.7, 0.3);    // 이어지는 짧은 C5 (리듬감 있게 마무리)
+    return;
+  }
+  const click = $('tTimbre').value === 'click';
+  const type = click ? 'square' : 'sine';
+  const dur = click ? 0.05 : 0.16;
+  const f = click ? [900, 1100, 1700] : [523, 659, 880];
+  if (mode === 'three') {
+    beep(s, f[0], vol * 0.7, dur, type);
+    beep(s + P.lead + P.back, f[1], vol * 0.8, dur, type);
+  }
+  beep(s + P.lead + P.back + P.fwd, f[2], vol, dur * 1.2, type);
+}
+
+function scheduler() {
+  const P = tParams();
+  while (anchor + kIdx * P.cycle < ac.currentTime + 0.25) {
+    playBeats(anchor + kIdx * P.cycle, P);
+    kIdx++;
+  }
+}
+
+function restartTempo() {
+  if (!running) return;
+  anchor = ac.currentTime + 0.12; kIdx = 0;
+}
+
+async function startTempo() {
+  if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (ac.state === 'suspended') await ac.resume();
+  running = true; anchor = ac.currentTime + 0.12; kIdx = 0;
+  timer = setInterval(scheduler, 30);
+  $('tStart').textContent = '■ 정지'; $('tStart').classList.add('run');
+  loop();
+}
+function stopTempo() {
+  running = false;
+  clearInterval(timer); timer = null;
+  if (raf) cancelAnimationFrame(raf); raf = null;
+  const b = $('tStart'); if (b) { b.textContent = '▶ 시작'; b.classList.remove('run'); }
+  ['d0', 'd1', 'd2'].forEach(i => $(i).classList.remove('on'));
+  $('playhead').style.left = '0%';
+  drawTempo();
+}
+$('tStart').addEventListener('click', () => running ? stopTempo() : startTempo());
+
+function strokePos(p, P) {
+  if (p < 0) return 0;
+  const ft = Math.min(P.rest * 0.5, P.fwd * 1.3);
+  if (p < P.back) { const u = p / P.back; return -(1 - Math.cos(Math.PI * u)) / 2; }
+  if (p < P.back + P.fwd) { const v = (p - P.back) / P.fwd; return -Math.cos(Math.PI * v / 2); }
+  const q = p - P.back - P.fwd;
+  if (q < ft) return 0.6 * Math.sin(Math.PI / 2 * q / ft);
+  const z = Math.min(1, (q - ft) / (P.rest - ft));
+  return 0.6 * (1 + Math.cos(Math.PI * z)) / 2;
+}
+
+function drawTempo(phase) {
+  const c = $('tCanvas'); if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const P = tParams();
+  const p = phase == null ? 0 : phase;
+  const x = phase == null ? 0 : strokePos(p - P.lead, P);
+  const sizeCm = parseFloat($('tSize').value);
+  const size = sizeCm / SIZE_REF_CM;
+  const app = tMode === 'app', A = app ? APP[+$('aSize').value] : null;
+  const maxAng = app ? A.deg * Math.PI / 180 : 0.33 * size;
+  const px = w / 2, py = app ? h * 0.42 : 18, L = app ? Math.min(h * 0.34, w * 0.36) : h - 70;
+  // 지면
+  g.fillStyle = '#cfe6cf'; g.fillRect(0, py + L + 16, w, h - (py + L + 16));
+  // 목표 범위(백 한계) 표시
+  const hx = px + Math.sin(-maxAng) * L, hy = py + Math.cos(maxAng) * L;
+  g.strokeStyle = 'rgba(92,158,230,.7)'; g.setLineDash([4, 4]); g.lineWidth = 2;
+  g.beginPath(); g.moveTo(hx, hy - 14); g.lineTo(hx, hy + 14); g.stroke(); g.setLineDash([]);
+  g.fillStyle = '#3d7dc4'; g.font = '600 12px -apple-system, sans-serif'; g.textAlign = 'center';
+  g.fillText(app ? '탑 ' + A.name : '백 ' + sizeCm + 'cm', hx, hy - 22);
+  // 임팩트 선
+  g.strokeStyle = 'rgba(46,125,50,.6)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(px, py + L - 18); g.lineTo(px, py + L + 18); g.stroke();
+  // 공
+  const q = p - P.lead - P.back - P.fwd;
+  let bx = px + (app ? 24 : 18), by = py + L + 4, ba = 1;
+  if (app) {
+    // 웨지: 공이 포물선으로 높이 떠올랐다가 떨어집니다
+    if (phase != null && q > 0 && q < 1.1) { const u = q / 1.1; bx += u * w * 0.34; by -= 4 * 85 * u * (1 - u); ba = u > 0.85 ? Math.max(0, (1 - u) / 0.15) : 1; }
+    else if (phase != null && q >= 1.1) ba = 0;
+  } else if (phase != null && q > 0 && q < 1) { bx += q * w * 0.28; ba = Math.max(0, 1 - q / 0.9); }
+  else if (phase != null && q >= 1) ba = 0;
+  g.globalAlpha = ba; g.fillStyle = '#fff'; g.strokeStyle = '#888'; g.lineWidth = 1.5;
+  g.beginPath(); g.arc(bx, by, 7, 0, 7); g.fill(); g.stroke(); g.globalAlpha = 1;
+  // 퍼터
+  const th = x * maxAng;
+  const ex = px + Math.sin(th) * L, ey = py + Math.cos(th) * L;
+  g.strokeStyle = app ? '#8a8f98' : '#444'; g.lineWidth = app ? 3 : 4; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(px, py); g.lineTo(ex, ey); g.stroke();
+  g.save(); g.translate(ex, ey); g.rotate(-th);
+  if (app) {
+    // 웨지 헤드: 로프트가 있는 페이스 + 솔 + 그루브
+    g.fillStyle = '#9aa1ab'; g.strokeStyle = '#555'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-3, -13); g.lineTo(2, -13); g.lineTo(13, 7); g.lineTo(-6, 7); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = '#555'; g.lineWidth = 1;
+    for (let i = 0; i < 3; i++) { const yy = -6 + i * 4.5; g.beginPath(); g.moveTo(-1 + (yy + 13) * 0.55, yy); g.lineTo(2 + (yy + 13) * 0.55, yy); g.stroke(); }
+    g.fillStyle = '#ff9800'; g.fillRect(-6, 5.5, 19, 2);
+  } else {
+    g.fillStyle = '#2b2b2b'; g.fillRect(-4, -14, 9, 28);
+    g.fillStyle = '#ff9800'; g.fillRect(3, -14, 2, 28);
+  }
+  g.restore();
+  g.fillStyle = '#444'; g.beginPath(); g.arc(px, py, 5, 0, 7); g.fill();
+  // 임팩트 플래시
+  if (phase != null && q >= 0 && q < 0.12) {
+    g.strokeStyle = 'rgba(255,152,0,' + (1 - q / 0.12) + ')'; g.lineWidth = 4;
+    g.beginPath(); g.arc(px + 6, py + L + 4, 16 + q * 120, 0, 7); g.stroke();
+  }
+}
+
+function loop() {
+  if (!running) return;
+  const P = tParams();
+  const now = ac.currentTime;
+  const t = now - anchor;
+  let phase = null;
+  if (t >= 0) {
+    phase = t % P.cycle;
+    $('playhead').style.left = (phase / P.cycle * 100) + '%';
+    const beats = [0, P.lead + P.back, P.lead + P.back + P.fwd];
+    beats.forEach((bt, i) => $('d' + i).classList.toggle('on', phase >= bt && phase < bt + 0.15 && ($('tSound').value !== 'mute' || true)));
+  }
+  drawTempo(phase);
+  raf = requestAnimationFrame(loop);
+}
+
+['tRatio', 'tTotal', 'tRest', 'aSize', 'aSpeed'].forEach(id => $(id).addEventListener('input', () => { updateTempoUI(); restartTempo(); }));
+['tSize', 'tVol'].forEach(id => $(id).addEventListener('input', updateTempoUI));
+$('tApply').addEventListener('click', () => {
+  const v = Math.max(5, Math.min(40, Math.round(SIZE_REF_CM * lastStrokePct / 100)));
+  $('tSize').value = v; updateTempoUI();
+});
+document.querySelectorAll('#tMode button').forEach(b => b.addEventListener('click', () => {
+  tMode = b.dataset.m;
+  document.querySelectorAll('#tMode button').forEach(x => x.classList.toggle('on', x === b));
+  const app = tMode === 'app';
+  ['gApp'].forEach(i => $(i).style.display = app ? 'block' : 'none');
+  ['gRatio', 'gTotal', 'gSize'].forEach(i => $(i).style.display = app ? 'none' : 'block');
+  $('tInstr').innerHTML = app
+    ? '스윙 크기별 템포 : 백스윙 : 다운스윙 = <b>약 2 : 1</b><br>스윙이 커질수록 시간은 늘고, 리듬 비율은 그대로입니다.'
+    : '백스트로크 : 포워드 = <b>2 : 1</b> 리듬<br>거리가 바뀌어도 템포는 그대로, 스트로크 크기만 바꿉니다.';
+  updateTempoUI(); restartTempo();
+}));
+window.addEventListener('resize', () => { if (!running) drawTempo(); });
+
+/* ---------------- 캐리 : 런 계산기 ---------------- */
+const CR_RUN = {
+  3: { 'S(56°)': 5, 'A(52°)': 7, 'P(48°)': 9, '9번': 11, '8번': 13, '7번': 15 },
+  5: { 'S(56°)': 5, 'A(52°)': 7.5, 'P(48°)': 10, '9번': 15, '8번': 20, '7번': 25 }
+};
+const CR_REF = 2.7;                                   // 기준표의 그린 스피드(스팀프)
+let crCarry = 5, crClub = 'S(56°)', crSlope = 0;
+function crRunOf(carry, club) {
+  let run = CR_RUN[carry][club];
+  if (crSlope > 0) run *= (1 - crSlope * 0.1);
+  else if (crSlope < 0) { const a = Math.abs(crSlope); run *= (1 + a * 0.1 + (a >= 3 ? 0.15 : 0)); }
+  run *= parseFloat($('crGreen').value) / CR_REF;     // 그린 스피드 보정 (런은 스팀프에 비례)
+  return Math.max(0, run);
+}
+function crCalc() {
+  const run = crRunOf(crCarry, crClub), total = crCarry + run;
+  const cp = total ? crCarry / total * 100 : 0, rp = total ? run / total * 100 : 0;
+  $('crTotal').textContent = total.toFixed(1);
+  $('crCarry').textContent = crCarry.toFixed(1);
+  $('crRun').textContent = run.toFixed(1);
+  $('crSel').textContent = '캐리 ' + crCarry + 'm · ' + crClub;
+  $('crBc').style.width = cp + '%'; $('crBr').style.width = rp + '%';
+  $('crBc').textContent = cp > 12 ? 'CARRY' : ''; $('crBr').textContent = rp > 12 ? 'RUN' : '';
+  const sv = $('crSlopeVal'), w = $('crWarn');
+  sv.textContent = crSlope > 0 ? '오르막 +' + crSlope + '%' : crSlope < 0 ? '내리막 ' + crSlope + '%' : '평지 0%';
+  sv.style.color = crSlope > 0 ? '#dc2626' : crSlope < 0 ? '#2563eb' : '';
+  w.innerHTML = crSlope <= -3 ? '<div class="crwarn dn">⚠️ 중력 가속도 구간: 공이 공식보다 10~20% 더 미끄러집니다!</div>'
+    : crSlope >= 3 ? '<div class="crwarn up">💡 런 급감 구간: 오르막에 부딪혀 런이 현저히 줄어듭니다.</div>' : '';
+  const g = parseFloat($('crGreen').value);
+  $('crGreenVal').textContent = g === CR_REF ? '기준' : (g > CR_REF ? '기준보다 빠름 ×' : '기준보다 느림 ×') + (g / CR_REF).toFixed(2);
+}
+function crSyncButtons() {
+  document.querySelectorAll('#crType button').forEach(x => x.classList.toggle('on', parseInt(x.dataset.c) === crCarry));
+  document.querySelectorAll('#crClubs button').forEach(x => x.classList.toggle('on', x.dataset.k === crClub));
+}
+$('crClubs').innerHTML = Object.keys(CR_RUN[3]).map(c => '<button data-k="' + c + '"' + (c === crClub ? ' class="on"' : '') + '>' + c + '</button>').join('');
+$('crGreen').innerHTML = $('greenSpeed').innerHTML; $('crGreen').value = $('greenSpeed').value;
+$('greenSpeed').addEventListener('change', () => { $('crGreen').value = $('greenSpeed').value; crUpdate(); });
+$('crGreen').addEventListener('change', () => { $('greenSpeed').value = $('crGreen').value; calculate(); crUpdate(); });
+function crUpdate() { crSyncButtons(); crCalc(); }
+$('crClubs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; crClub = b.dataset.k; crSyncButtons(); crCalc(); });
+$('crType').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; crCarry = parseInt(b.dataset.c); crSyncButtons(); crCalc(); });
+$('crSlope').addEventListener('input', e => { crSlope = parseInt(e.target.value); crUpdate(); });
+crUpdate();
+
+/* ---------------- 슬라이더 채움(그린) 표시 ---------------- */
+function refreshRanges() {
+  document.querySelectorAll('input[type=range]').forEach(r => {
+    const mn = parseFloat(r.min || 0), mx = parseFloat(r.max || 100);
+    r.style.setProperty('--p', ((parseFloat(r.value) - mn) / (mx - mn) * 100) + '%');
+  });
+}
+document.addEventListener('input', e => { if (e.target.type === 'range') refreshRanges(); });
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setTimeout(refreshRanges, 0)));
+
+updateTempoUI();
+calculate();
+refreshRanges();
+</script>
+<script>(function(){function go(){var t=(location.hash||'').slice(1);try{if(!t){t=localStorage.getItem('pd_tab')||'';localStorage.removeItem('pd_tab');}}catch(e){}var b=t&&document.querySelector('.tab[data-tab="'+t+'"]');if(b)b.click();}go();window.addEventListener('hashchange',go);})();</script>
+</body>
+</html>
