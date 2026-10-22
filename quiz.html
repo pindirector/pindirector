@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>퍼팅 퀴즈 · Pin Director</title>
+<meta name="description" content="Pin Director 퍼팅 퀴즈 · 무작위 그린 상황에서 조준점을 맞혀 보는 그린 리딩 연습">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+:root{--g:#0a4a35;--g2:#0f5d42;--gd:#06352a;--gold:#c9a227;--goldl:#f2d675;--bg:#f3f5f2;--ink:#1f2b24;--muted:#5d6a62;--line:#dfe5df;--field:#c9d2cb;
+  --f:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fbfcfa 0%,#eef1ec 100%);background-color:var(--bg);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top a{color:var(--g);font-weight:800;text-decoration:none;font-size:14px;padding:8px 0}
+.top img{height:34px;width:auto;mix-blend-mode:multiply}
+.band{background:linear-gradient(180deg,var(--g2),var(--gd));border-bottom:3px solid var(--gold);border-radius:16px;color:#fff6d6;padding:14px 16px;box-shadow:0 6px 20px rgba(8,50,35,.15);display:flex;flex-direction:column;gap:6px}
+.band .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.band h1{margin:0;font-size:21px;font-weight:900}
+.band .prog{font-size:13px;font-weight:800;color:var(--goldl)}
+.pbar{height:6px;background:rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
+.pbar div{height:6px;background:var(--goldl);border-radius:3px;width:0;transition:width .25s}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 4px 14px rgba(8,50,35,.07);display:flex;flex-direction:column;gap:10px}
+.card h2{margin:0;font-size:16px;font-weight:900}
+.green{padding:0;overflow:hidden}
+.green svg{display:block;width:100%;height:auto}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.fact{background:#fff;border:1px solid var(--line);border-radius:12px;padding:7px 4px;text-align:center;font-size:11.5px;color:var(--muted)}
+.fact b{display:block;font-size:15.5px;font-weight:900;color:var(--ink);line-height:1.35}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.opt{min-height:50px;border:1px solid var(--field);border-radius:12px;background:#fff;font-size:15.5px;font-weight:800;color:var(--ink);padding:6px}
+.opt:disabled{cursor:default}
+.opt.right{background:var(--g);border:2px solid var(--gold);color:#fff6d6}
+.opt.wrong{background:#fdecea;border:2px solid #c0392b;color:#8e2b20}
+.btn{height:48px;border:0;border-radius:12px;background:linear-gradient(180deg,var(--g2),var(--gd));color:#fff6d6;font-size:15px;font-weight:800;padding:0 16px;width:100%}
+.btn2{height:48px;border:2px solid var(--gold);border-radius:12px;background:#fff;color:var(--g);font-size:14.5px;font-weight:800;padding:0 14px;width:100%}
+.result{background:#fbf6e3;border:1px solid #e8d48c}
+.result .tag{font-size:13px;font-weight:800;color:#7a5d06}
+.result .big{font-size:17px;font-weight:900}
+.result p{margin:0;font-size:13.5px;color:var(--muted)}
+.score{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:0 4px}
+.score b{color:var(--g)}
+.level{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lv{min-height:64px;border:1px solid var(--field);border-radius:12px;background:#fff;text-align:left;padding:10px 12px;color:var(--ink)}
+.lv b{display:block;font-size:15px}
+.lv span{font-size:12px;color:var(--muted)}
+.lv[aria-pressed="true"]{border:2px solid var(--gold);background:#eef5ef}
+.final{font-size:44px;font-weight:900;color:var(--g);text-align:center;line-height:1.2}
+.center{text-align:center;color:var(--muted);font-size:14px}
+.note{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+.footer{text-align:center;font-size:12.5px;color:#8c968f;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="index.html">‹ 홈</a><img src="logo.webp" alt="Pin Director"></div>
+  <div class="band">
+    <div class="row"><h1>퍼팅 퀴즈</h1><span class="prog" id="prog"></span></div>
+    <div class="pbar"><div id="pfill"></div></div>
+  </div>
+
+  <!-- 시작 -->
+  <section class="card" id="startCard">
+    <h2>그린을 읽고 조준점을 맞혀 보세요</h2>
+    <p style="margin:0;font-size:14px;color:var(--muted)">무작위 그린 상황 10문제가 나옵니다. 홀컵 중심에서 몇 컵 옆을 볼지 고르면, 그린 리딩 계산기와 같은 계산으로 정답과 공의 궤적을 보여드려요.</p>
+    <div class="level">
+      <button class="lv" data-lv="basic" aria-pressed="true"><b>기본</b><span>옆경사만 · 평지</span></button>
+      <button class="lv" data-lv="real" aria-pressed="false"><b>실전</b><span>오르막·내리막 + 그린 스피드</span></button>
+    </div>
+    <button class="btn" id="startBtn">10문제 시작</button>
+    <div class="center" id="bestLine"></div>
+  </section>
+
+  <!-- 문제 -->
+  <section class="card green hidden" id="greenCard"><div id="green"></div></section>
+  <div class="facts hidden" id="facts"></div>
+  <section class="card hidden" id="askCard">
+    <h2>어디를 보고 쳐야 할까요?</h2>
+    <div class="opts" id="opts"></div>
+    <div class="note">표준 세기(홀컵을 약 40cm 지나가는 세기) 기준입니다. 1컵 = 10.8cm</div>
+  </section>
+  <section class="card result hidden" id="resultCard">
+    <span class="tag" id="rTag"></span>
+    <span class="big" id="rBig"></span>
+    <p id="rMsg"></p>
+    <button class="btn" id="nextBtn">다음 문제</button>
+  </section>
+  <div class="score hidden" id="scoreRow"><span>점수 <b id="sc">0</b></span><span>정답 <b id="ok">0</b></span><span>최고 기록 <b id="best">-</b></span></div>
+
+  <!-- 끝 -->
+  <section class="card hidden" id="endCard">
+    <h2 style="text-align:center">결과</h2>
+    <div class="final" id="fScore">0</div>
+    <div class="center" id="fLine"></div>
+    <button class="btn" id="againBtn">다시 하기</button>
+    <a class="btn2" href="pindirector.html#green" style="display:flex;align-items:center;justify-content:center;text-decoration:none">그린 리딩 계산기 열기</a>
+  </section>
+
+  <div class="footer">© PIN DIRECTOR. All Rights Reserved.</div>
+</div>
+
+<script>
+/* 그린 리딩 계산기(pindirector.html)와 같은 물리 계산 — 수정 시 두 파일을 함께 맞춰 주세요 */
+/*PHYS_START*/
+const G = 9.81, V0 = 1.83, K58 = 5 / 7, CUP = 0.108;
+
+function simulate(P, v, phi) {
+  let x = 0, y = 0, vx = v * Math.sin(phi), vy = v * Math.cos(phi), t = 0;
+  const dt = 0.004, path = [[0, 0]];
+  let xAtD = null, tAtD = null, vAtD = null, n = 0;
+  while (t < 25) {
+    const sp = Math.hypot(vx, vy);
+    if (sp < 0.03) break;
+    const ax = -P.aFlat * vx / sp + P.aX;
+    const ay = -P.aFlat * vy / sp + P.aY;
+    vx += ax * dt; vy += ay * dt;
+    const py = y;
+    x += vx * dt; y += vy * dt; t += dt; n++;
+    if (xAtD === null && py < P.D && y >= P.D) {
+      const f = (P.D - py) / (y - py);
+      xAtD = x - vx * dt * (1 - f); tAtD = t - dt * (1 - f); vAtD = Math.hypot(vx, vy);
+    }
+    if (n % 5 === 0) path.push([x, y]);
+    if (y > P.D + 4 || y < -1) break;
+  }
+  path.push([x, y]);
+  const crossed = xAtD !== null;
+  return { xAtD: crossed ? xAtD : x, tAtD: crossed ? tAtD : t, vAtD: vAtD || 0, crossed, path, stopX: x, stopY: y };
+}
+
+function buildParams(inp) {
+  const aFlat = V0 * V0 / (2 * inp.speed);
+  const aAlong = K58 * G * Math.sin(Math.atan(inp.alongPct / 100)) * inp.cal;
+  const aSide = K58 * G * Math.sin(Math.atan(inp.sidePct / 100)) * inp.cal;
+  const up = inp.alongDir === 'up';
+  return {
+    D: inp.D, aFlat,
+    aY: up ? -aAlong : aAlong,
+    aX: inp.sideDir === 'left' ? aSide : -aSide,
+    aEff: up ? aFlat + aAlong : Math.max(aFlat - aAlong, 0.12 * aFlat),
+    rawEff: up ? aFlat + aAlong : aFlat - aAlong,
+    aAlong, aSide
+  };
+}
+
+function solve(inp, over) {
+  const P = buildParams(inp);
+  const v = Math.sqrt(2 * P.aEff * (P.D + over));
+  let lo = -0.7, hi = 0.7;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (simulate(P, v, mid).xAtD > 0) hi = mid; else lo = mid;
+  }
+  const phi = (lo + hi) / 2;
+  const sim = simulate(P, v, phi);
+  const dEq = Math.max(0, (P.D + over) * P.aEff / P.aFlat - over);
+  const vRef = Math.sqrt(2 * P.aFlat * (5 + 0.4));
+  return { v, phi, aimOff: P.D * Math.tan(phi), dEq, T: sim.tAtD, sim, over, strokePct: v / vRef * 100, P };
+}
+/*PHYS_END*/
+
+(function () {
+  const $ = id => document.getElementById(id);
+  const TOTAL = 10, OVER = 0.40, BEST_KEY = 'pd_quiz_best_v1';
+  const rnd = (a, b, step) => a + step * Math.floor(Math.random() * (Math.round((b - a) / step) + 1));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  let level = 'basic', qi = 0, score = 0, okCount = 0, q = null;
+
+  function getBest() { try { return JSON.parse(localStorage.getItem(BEST_KEY) || '{}'); } catch (e) { return {}; } }
+  function setBest(lv, s) { try { const b = getBest(); if (!(b[lv] >= s)) { b[lv] = s; localStorage.setItem(BEST_KEY, JSON.stringify(b)); return true; } } catch (e) {} return false; }
+  function bestText(lv) { const b = getBest()[lv]; return b == null ? '-' : String(b); }
+  function label(dir, cups) { return (dir === 'left' ? '왼쪽 ' : '오른쪽 ') + (cups % 1 ? cups.toFixed(1) : cups.toFixed(0)) + '컵'; }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.lv'), b => b.addEventListener('click', () => {
+    level = b.dataset.lv;
+    document.querySelectorAll('.lv').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    $('bestLine').textContent = '최고 기록: ' + bestText(level) + '점';
+  }));
+  $('bestLine').textContent = '최고 기록: ' + bestText(level) + '점';
+
+  /* 문제 만들기 */
+  function makeQuestion() {
+    for (let tries = 0; tries < 60; tries++) {
+      const inp = {
+        D: rnd(1.5, 8, 0.5),
+        sidePct: rnd(0.5, 3, 0.5),
+        sideDir: pick(['left', 'right']),
+        alongDir: level === 'real' ? pick(['up', 'down']) : 'up',
+        alongPct: level === 'real' ? rnd(0, 2.5, 0.5) : 0,
+        speed: level === 'real' ? pick([2.4, 2.7, 3.0, 3.3]) : 2.7,
+        cal: 1
+      };
+      const res = solve(inp, OVER);
+      if (!res.sim.crossed || res.P.rawEff <= 0.2 * res.P.aFlat) continue;
+      const exact = Math.abs(res.aimOff) / CUP;
+      if (exact < 0.6 || exact > 7.5) continue;
+      const ans = Math.max(0.5, Math.round(exact * 2) / 2);
+      const dir = res.aimOff < 0 ? 'left' : 'right';
+      const other = dir === 'left' ? 'right' : 'left';
+      // 보기: 정답, 반대 방향 같은 크기(경사 방향을 거꾸로 읽은 경우), 크기만 다른 보기 2개
+      const near = [ans - 1, ans + 1, ans - 1.5, ans + 1.5, ans + 2, ans - 0.5, ans + 0.5].filter(v => v >= 0.5);
+      const pickNear = [];
+      while (pickNear.length < 2 && near.length) {
+        const v = near.splice(Math.floor(Math.random() * Math.min(4, near.length)), 1)[0];
+        if (pickNear.indexOf(v) < 0) pickNear.push(v);
+      }
+      const opts = [{ dir, cups: ans, ok: true }, { dir: other, cups: ans, ok: false }].concat(pickNear.map(v => ({ dir, cups: v, ok: false })));
+      for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+      return { inp, res, exact, ans, dir, opts };
+    }
+    return null;
+  }
+
+  /* 그린 그림 */
+  function drawGreen(q, chosen) {
+    const W = 340, H = 300, cx = W / 2, padT = 46, padB = 40;
+    const D = q.inp.D, ys = (H - padT - padB) / (D + 0.6), xs = 120 / 0.9; // 좌우 ±약 8컵이 들어가는 고정 배율
+    const X = m => (cx + m * xs), Y = m => (H - padB - m * ys);
+    const fallRight = q.inp.sideDir === 'left';
+    let arrows = '';
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) {
+      const ax = 50 + c * 120 + (r % 2) * 40, ay = 70 + r * 58, d = fallRight ? 1 : -1;
+      arrows += `<path d="M${ax - 14 * d} ${ay} L${ax + 14 * d} ${ay} M${ax + 8 * d} ${ay - 5} L${ax + 14 * d} ${ay} L${ax + 8 * d} ${ay + 5}" stroke="#ffffff" stroke-opacity=".35" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    const hx = X(0), hy = Y(D), by = Y(0);
+    let over = '';
+    if (chosen) {
+      const pts = q.res.sim.path.filter(p => p[1] <= D + 0.6).map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
+      const aimX = X(q.res.aimOff);
+      over += `<line x1="${cx}" y1="${by}" x2="${aimX.toFixed(1)}" y2="${hy}" stroke="#f2d675" stroke-width="2" stroke-dasharray="5 4"/>`;
+      over += `<polyline points="${pts}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+      over += `<circle cx="${aimX.toFixed(1)}" cy="${hy}" r="6" fill="#f2d675" stroke="#06352a" stroke-width="1.5"/>`;
+      over += `<circle cx="20" cy="22" r="6" fill="#f2d675" stroke="#06352a" stroke-width="1.5"/><text x="32" y="26" font-size="12" font-weight="700" fill="#ffffff">정답 에임</text>`;
+      if (!chosen.ok) {
+        const ux = X((chosen.dir === 'left' ? -1 : 1) * chosen.cups * CUP);
+        over += `<circle cx="${ux.toFixed(1)}" cy="${hy}" r="6" fill="none" stroke="#ffb4a8" stroke-width="2.5"/>`;
+        over += `<circle cx="110" cy="22" r="6" fill="none" stroke="#ffb4a8" stroke-width="2.5"/><text x="122" y="26" font-size="12" font-weight="700" fill="#ffffff">내 선택</text>`;
+      }
+    }
+    const along = q.inp.alongPct > 0 ? `${q.inp.alongDir === 'up' ? '오르막' : '내리막'} ${q.inp.alongPct}%` : '평지';
+    const sideTxt = `${fallRight ? '오른쪽' : '왼쪽'}으로 흐름 ${q.inp.sidePct}%`;
+    $('green').innerHTML =
+      `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="그린 그림: 거리 ${D}m, ${sideTxt}, ${along}">
+        <rect width="${W}" height="${H}" fill="#2f7a4f"/>
+        ${arrows}
+        <line x1="${cx}" y1="${by}" x2="${cx}" y2="${hy}" stroke="#ffffff" stroke-opacity=".25" stroke-dasharray="2 5"/>
+        <circle cx="${hx}" cy="${hy}" r="8" fill="#0d2a1d"/>
+        ${chosen ? '' : `<line x1="${hx}" y1="${hy}" x2="${hx}" y2="${hy - 34}" stroke="#f2f2f2" stroke-width="2"/><path d="M${hx} ${hy - 34} L${hx + 20} ${hy - 27} L${hx} ${hy - 20} Z" fill="#c9a227"/>`}
+        ${over}
+        <circle cx="${cx}" cy="${by}" r="7" fill="#ffffff" stroke="#cfd6cf"/>
+        <text x="12" y="${H - 12}" font-size="12" font-weight="700" fill="#ffffff">${sideTxt}</text>
+        <text x="${W - 12}" y="${H - 12}" font-size="12" font-weight="700" text-anchor="end" fill="#ffffff">${along}</text>
+      </svg>`;
+  }
+
+  function showQuestion() {
+    q = makeQuestion();
+    if (!q) { qi = TOTAL; return finish(); }
+    $('prog').textContent = `문제 ${qi + 1} / ${TOTAL}`;
+    $('pfill').style.width = (qi / TOTAL * 100) + '%';
+    drawGreen(q, null);
+    const i = q.inp;
+    $('facts').innerHTML =
+      `<div class="fact">거리<b>${i.D}m</b></div>` +
+      `<div class="fact">옆경사<b>${i.sidePct}%</b></div>` +
+      `<div class="fact">${i.alongPct ? (i.alongDir === 'up' ? '오르막' : '내리막') : '앞뒤 경사'}<b>${i.alongPct ? i.alongPct + '%' : '없음'}</b></div>` +
+      `<div class="fact">그린 스피드<b>${i.speed}m</b></div>`;
+    $('opts').innerHTML = q.opts.map((o, k) => `<button class="opt" data-k="${k}">${label(o.dir, o.cups)}</button>`).join('');
+    ['greenCard', 'facts', 'askCard', 'scoreRow'].forEach(id => $(id).classList.remove('hidden'));
+    $('resultCard').classList.add('hidden');
+    $('sc').textContent = score; $('ok').textContent = okCount; $('best').textContent = bestText(level);
+  }
+
+  $('opts').addEventListener('click', e => {
+    const b = e.target.closest('.opt'); if (!b || b.disabled) return;
+    const o = q.opts[Number(b.dataset.k)];
+    const btns = document.querySelectorAll('#opts .opt');
+    btns.forEach((x, k) => { x.disabled = true; if (q.opts[k].ok) x.classList.add('right'); });
+    let pts = 0, tag;
+    if (o.ok) { pts = 100; okCount++; tag = '정답! +100'; }
+    else {
+      b.classList.add('wrong');
+      if (o.dir === q.dir && Math.abs(o.cups - q.ans) <= 1) { pts = 30; tag = '아깝다! +30'; }
+      else tag = '오답';
+    }
+    score += pts;
+    drawGreen(q, o);
+    const cm = Math.round(Math.abs(q.res.aimOff) * 100);
+    $('rTag').textContent = tag;
+    $('rBig').textContent = '정답: ' + label(q.dir, q.ans);
+    let msg = `정확한 계산값은 ${q.dir === 'left' ? '왼쪽' : '오른쪽'} ${q.exact.toFixed(1)}컵(홀컵 중심에서 약 ${cm}cm)입니다.`;
+    if (!o.ok && o.dir !== q.dir) msg += ' 공은 낮은 쪽으로 흐르니, 높은 쪽을 보고 쳐야 해요.';
+    else if (!o.ok && o.cups < q.ans) msg += ' 생각보다 더 많이 휘었어요.';
+    else if (!o.ok) msg += ' 생각보다 덜 휘었어요.';
+    if (o.ok && q.inp.alongDir === 'down' && q.inp.alongPct >= 1.5) msg += ' 내리막은 공이 느려 더 많이 휩니다.';
+    $('rMsg').textContent = msg;
+    $('nextBtn').textContent = qi + 1 >= TOTAL ? '결과 보기' : '다음 문제';
+    $('resultCard').classList.remove('hidden');
+    $('sc').textContent = score; $('ok').textContent = okCount;
+    $('pfill').style.width = ((qi + 1) / TOTAL * 100) + '%';
+    $('nextBtn').focus();
+  });
+
+  $('nextBtn').addEventListener('click', () => { qi++; if (qi >= TOTAL) finish(); else { showQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+
+  function start() {
+    qi = 0; score = 0; okCount = 0;
+    $('startCard').classList.add('hidden'); $('endCard').classList.add('hidden');
+    showQuestion();
+  }
+  function finish() {
+    ['greenCard', 'facts', 'askCard', 'resultCard', 'scoreRow'].forEach(id => $(id).classList.add('hidden'));
+    const isBest = setBest(level, score);
+    $('prog').textContent = '완료';
+    $('pfill').style.width = '100%';
+    $('fScore').textContent = score + '점';
+    $('fLine').textContent = `${level === 'real' ? '실전' : '기본'} · ${TOTAL}문제 중 ${okCount}개 정답` + (isBest ? ' · 최고 기록!' : ` · 최고 기록 ${bestText(level)}점`);
+    $('endCard').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  $('startBtn').addEventListener('click', start);
+  $('againBtn').addEventListener('click', () => { $('endCard').classList.add('hidden'); $('startCard').classList.remove('hidden'); $('prog').textContent = ''; $('pfill').style.width = '0'; $('bestLine').textContent = '최고 기록: ' + bestText(level) + '점'; });
+})();
+</script>
+</body>
+</html>
