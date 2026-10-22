@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>라운드 기록 · Pin Director</title>
+<meta name="description" content="Pin Director 라운드 기록 · 홀별 퍼팅 기록과 거리별 1퍼트 성공률">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+:root{--g:#0a4a35;--g2:#0f5d42;--gd:#06352a;--gold:#c9a227;--goldl:#f2d675;--bg:#f3f5f2;--ink:#1f2b24;--muted:#5d6a62;--line:#dfe5df;--field:#c9d2cb;
+  --f:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fbfcfa 0%,#eef1ec 100%);background-color:var(--bg);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top a{color:var(--g);font-weight:800;text-decoration:none;font-size:14px;padding:8px 0}
+.top img{height:34px;width:auto;mix-blend-mode:multiply}
+.band{background:linear-gradient(180deg,var(--g2),var(--gd));border-bottom:3px solid var(--gold);border-radius:16px;color:#fff6d6;padding:14px 16px;box-shadow:0 6px 20px rgba(8,50,35,.15)}
+.band h1{margin:0;font-size:21px;font-weight:900}
+.band p{margin:2px 0 0;font-size:13px;color:#d9e6dd}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 4px 14px rgba(8,50,35,.07);display:flex;flex-direction:column;gap:10px}
+.card h2{margin:0;font-size:16px;font-weight:900}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sub{font-size:12.5px;color:var(--muted)}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+input,select{height:44px;border:1px solid var(--field);border-radius:10px;padding:0 12px;font-size:16px;font-family:inherit;color:var(--ink);background:#fff;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+button{font-family:inherit;cursor:pointer}
+.btn{height:46px;border:0;border-radius:12px;background:linear-gradient(180deg,var(--g2),var(--gd));color:#fff6d6;font-size:15px;font-weight:800;padding:0 16px}
+.btn:disabled{opacity:.45;cursor:default}
+.btn2{height:46px;border:2px solid var(--gold);border-radius:12px;background:#fff;color:var(--g);font-size:14px;font-weight:800;padding:0 14px}
+.pick{height:46px;border:1px solid var(--field);border-radius:10px;background:#fff;font-size:16px;font-weight:700;color:var(--ink)}
+.pick[aria-pressed="true"]{background:var(--g);border:2px solid var(--gold);color:#fff6d6}
+.tile{background:#eef5ef;border-radius:12px;padding:8px 6px;text-align:center;font-size:12px;color:var(--muted)}
+.tile b{display:block;font-size:22px;font-weight:900;color:var(--g);line-height:1.3}
+.holes{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
+.hole{height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px;font-weight:700;color:var(--muted);padding:0}
+.hole.done{background:#eef5ef;color:var(--g);border-color:#bcd3c2}
+.hole.cur{border:2px solid var(--gold);color:var(--ink)}
+.bars{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.bar{display:grid;grid-template-columns:62px 1fr 74px;align-items:center;gap:8px}
+.track{height:12px;background:#e8ece8;border-radius:6px;overflow:hidden}
+.fill{height:12px;background:var(--g);border-radius:6px}
+.bar .v{text-align:right;font-weight:700}
+.bar .v small{font-weight:500;color:var(--muted)}
+.list{display:flex;flex-direction:column}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #eef1ee;font-size:14px}
+.item:last-child{border-bottom:0}
+.item .del{height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);font-size:12.5px;padding:0 10px}
+.empty{font-size:13.5px;color:var(--muted);text-align:center;padding:10px 0}
+.note{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+.footer{text-align:center;font-size:12.5px;color:#8c968f;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="index.html">‹ 홈</a><img src="logo.webp" alt="Pin Director"></div>
+  <div class="band"><h1>라운드 기록</h1><p>홀마다 첫 퍼팅 거리와 퍼팅 수를 남기면 거리별 성공률을 보여드려요.</p></div>
+
+  <!-- 새 라운드 시작 -->
+  <section class="card" id="startCard">
+    <h2>새 라운드 시작</h2>
+    <label>골프장<input id="course" type="text" placeholder="예: OO CC" maxlength="40" autocomplete="off"></label>
+    <div class="grid2">
+      <label>날짜<input id="date" type="date"></label>
+      <label>홀 수<select id="holeCount"><option value="18">18홀</option><option value="9">9홀</option></select></label>
+    </div>
+    <button class="btn" id="startBtn">기록 시작</button>
+  </section>
+
+  <!-- 홀 입력 -->
+  <section class="card hidden" id="entryCard">
+    <div class="row"><h2 id="holeTitle">1번 홀</h2><span class="sub" id="roundInfo"></span></div>
+    <label>첫 퍼팅 거리 (m)<input id="dist" type="number" inputmode="decimal" min="0" max="40" step="0.1" placeholder="예: 4.5"></label>
+    <div style="font-size:13px;color:var(--muted);font-weight:500">퍼팅 수</div>
+    <div class="grid4" id="puttPicks">
+      <button class="pick" data-p="1" aria-pressed="false">1</button>
+      <button class="pick" data-p="2" aria-pressed="false">2</button>
+      <button class="pick" data-p="3" aria-pressed="false">3</button>
+      <button class="pick" data-p="4" aria-pressed="false">4+</button>
+    </div>
+    <div class="grid2">
+      <button class="btn2" id="prevBtn">‹ 이전 홀</button>
+      <button class="btn" id="nextBtn">저장하고 다음 홀</button>
+    </div>
+    <div class="holes" id="holeDots" aria-label="홀 이동"></div>
+    <div class="grid3">
+      <div class="tile">입력한 홀<b id="tHoles">0</b></div>
+      <div class="tile">총 퍼팅<b id="tPutts">0</b></div>
+      <div class="tile">3퍼트+<b id="tThree">0</b></div>
+    </div>
+    <div class="grid2">
+      <button class="btn2" id="cancelBtn">라운드 취소</button>
+      <button class="btn" id="finishBtn">라운드 종료</button>
+    </div>
+  </section>
+
+  <!-- 통계 -->
+  <section class="card">
+    <div class="row"><h2>내 퍼팅 통계</h2><span class="sub" id="statScope"></span></div>
+    <div class="grid3">
+      <div class="tile">18홀 평균 퍼팅<b id="sAvg">-</b></div>
+      <div class="tile">1퍼트 비율<b id="sOne">-</b></div>
+      <div class="tile">3퍼트 비율<b id="sThree">-</b></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><h2>거리별 1퍼트 성공률</h2><span class="sub">첫 퍼팅 거리 기준</span></div>
+    <div class="bars" id="bars"></div>
+    <div class="note" id="barTip"></div>
+  </section>
+
+  <section class="card">
+    <div class="row"><h2>라운드별 퍼팅 추이</h2><span class="sub">최근 10라운드 · 18홀 기준</span></div>
+    <div id="trend"></div>
+  </section>
+
+  <section class="card">
+    <h2>지난 라운드</h2>
+    <div class="list" id="history"></div>
+    <div class="note">기록은 이 기기의 브라우저에만 저장됩니다. 브라우저 데이터를 지우면 함께 사라져요.</div>
+  </section>
+
+  <div class="footer">© PIN DIRECTOR. All Rights Reserved.</div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'pd_rounds_v1';
+  var $ = function (id) { return document.getElementById(id); };
+  var rounds = load();
+  var holeIdx = 0;
+
+  function load() {
+    try { var v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v : []; }
+    catch (e) { return []; }
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(rounds)); } catch (e) {} }
+  function cur() { for (var i = 0; i < rounds.length; i++) if (!rounds[i].done) return rounds[i]; return null; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function today() { var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+  function filled(r) { return r.holes.filter(function (h) { return h && h.p; }); }
+  function fmtDate(s) { var p = (s || '').split('-'); return p.length === 3 ? Number(p[1]) + '월 ' + Number(p[2]) + '일' : s; }
+
+  $('date').value = today();
+
+  /* ---------- 라운드 시작 ---------- */
+  $('startBtn').addEventListener('click', function () {
+    var n = parseInt($('holeCount').value, 10) || 18;
+    var holes = []; for (var i = 0; i < n; i++) holes.push(null);
+    rounds.push({ id: Date.now(), course: ($('course').value || '').trim() || '이름 없는 골프장', date: $('date').value || today(), holes: holes, done: false });
+    holeIdx = 0; save(); render();
+    $('dist').focus();
+  });
+
+  /* ---------- 홀 입력 ---------- */
+  var picked = 0;
+  Array.prototype.forEach.call(document.querySelectorAll('#puttPicks .pick'), function (b) {
+    b.addEventListener('click', function () { picked = parseInt(b.dataset.p, 10); syncPicks(); syncNext(); });
+  });
+  function syncPicks() {
+    Array.prototype.forEach.call(document.querySelectorAll('#puttPicks .pick'), function (b) {
+      b.setAttribute('aria-pressed', String(parseInt(b.dataset.p, 10) === picked));
+    });
+  }
+  function syncNext() {
+    var r = cur(); if (!r) return;
+    $('nextBtn').disabled = !picked;
+    $('nextBtn').textContent = holeIdx === r.holes.length - 1 ? '저장' : '저장하고 다음 홀';
+  }
+  function storeHole() {
+    var r = cur(); if (!r || !picked) return false;
+    var d = parseFloat($('dist').value);
+    r.holes[holeIdx] = { d: isFinite(d) && d >= 0 ? Math.round(d * 10) / 10 : null, p: picked };
+    save(); return true;
+  }
+  function gotoHole(i) {
+    var r = cur(); if (!r) return;
+    holeIdx = Math.max(0, Math.min(r.holes.length - 1, i));
+    var h = r.holes[holeIdx];
+    $('dist').value = h && h.d != null ? h.d : '';
+    picked = h ? h.p : 0;
+    renderEntry();
+  }
+  $('nextBtn').addEventListener('click', function () {
+    var r = cur(); if (!storeHole()) return;
+    if (holeIdx < r.holes.length - 1) gotoHole(holeIdx + 1); else renderEntry();
+    renderStats();
+  });
+  $('prevBtn').addEventListener('click', function () { if (picked) storeHole(); gotoHole(holeIdx - 1); renderStats(); });
+  $('dist').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.target.blur(); });
+
+  $('finishBtn').addEventListener('click', function () {
+    var r = cur(); if (!r) return;
+    if (picked) storeHole();
+    var n = filled(r).length;
+    if (!n) { alert('입력한 홀이 없습니다. 한 홀 이상 기록해 주세요.'); return; }
+    if (n < r.holes.length && !confirm(r.holes.length + '홀 중 ' + n + '홀만 입력했어요. 이대로 종료할까요?')) return;
+    r.done = true; save(); render();
+  });
+  $('cancelBtn').addEventListener('click', function () {
+    var r = cur(); if (!r) return;
+    if (!confirm('진행 중인 라운드를 삭제할까요? 입력한 홀 기록도 함께 지워집니다.')) return;
+    rounds = rounds.filter(function (x) { return x !== r; }); save(); render();
+  });
+
+  /* ---------- 렌더링 ---------- */
+  function renderEntry() {
+    var r = cur(); if (!r) return;
+    $('holeTitle').textContent = (holeIdx + 1) + '번 홀';
+    $('roundInfo').textContent = r.course + ' · ' + fmtDate(r.date);
+    $('prevBtn').disabled = holeIdx === 0;
+    syncPicks(); syncNext();
+    var html = '';
+    r.holes.forEach(function (h, i) {
+      html += '<button class="hole' + (h && h.p ? ' done' : '') + (i === holeIdx ? ' cur' : '') + '" data-i="' + i + '" aria-label="' + (i + 1) + '번 홀' + (h && h.p ? ', ' + h.p + '퍼트' : '') + '">' + (i + 1) + '</button>';
+    });
+    $('holeDots').innerHTML = html;
+    var f = filled(r), sum = 0, three = 0;
+    f.forEach(function (h) { sum += h.p; if (h.p >= 3) three++; });
+    $('tHoles').textContent = f.length + '/' + r.holes.length;
+    $('tPutts').textContent = sum;
+    $('tThree').textContent = three;
+  }
+  $('holeDots').addEventListener('click', function (e) {
+    var b = e.target.closest('.hole'); if (!b) return;
+    if (picked) storeHole();
+    gotoHole(parseInt(b.dataset.i, 10)); renderStats();
+  });
+
+  var BUCKETS = [[0, 1, '1m 이내'], [1, 2, '1–2m'], [2, 3, '2–3m'], [3, 5, '3–5m'], [5, 99, '5m 이상']];
+
+  function renderStats() {
+    var all = [];
+    rounds.forEach(function (r) { filled(r).forEach(function (h) { all.push(h); }); });
+    var done = rounds.filter(function (r) { return r.done && filled(r).length; });
+    $('statScope').textContent = all.length ? '라운드 ' + rounds.filter(function (r) { return filled(r).length; }).length + '개 · ' + all.length + '홀' : '';
+
+    if (all.length) {
+      var sum = 0, one = 0, three = 0;
+      all.forEach(function (h) { sum += h.p; if (h.p === 1) one++; if (h.p >= 3) three++; });
+      $('sAvg').textContent = (sum / all.length * 18).toFixed(1);
+      $('sOne').textContent = Math.round(one / all.length * 100) + '%';
+      $('sThree').textContent = Math.round(three / all.length * 100) + '%';
+    } else { $('sAvg').textContent = $('sOne').textContent = $('sThree').textContent = '-'; }
+
+    // 거리별
+    var withD = all.filter(function (h) { return h.d != null; });
+    var worst = null, html = '';
+    BUCKETS.forEach(function (b) {
+      var hs = withD.filter(function (h) { return h.d >= b[0] && h.d < b[1]; });
+      var ok = hs.filter(function (h) { return h.p === 1; }).length;
+      var pct = hs.length ? Math.round(ok / hs.length * 100) : null;
+      html += '<div class="bar"><span>' + b[2] + '</span><div class="track"><div class="fill" style="width:' + (pct || 0) + '%"></div></div>' +
+        '<span class="v">' + (pct == null ? '<small>기록 없음</small>' : pct + '% <small>' + ok + '/' + hs.length + '</small>') + '</span></div>';
+    });
+    $('bars').innerHTML = html;
+    $('barTip').textContent = withD.length ? '' : '첫 퍼팅 거리를 함께 입력하면 거리별 성공률이 채워집니다.';
+
+    // 추이
+    var last = done.slice(-10);
+    if (last.length < 2) {
+      $('trend').innerHTML = '<div class="empty">라운드를 2개 이상 마치면 추이가 그려집니다.</div>';
+    } else {
+      var vals = last.map(function (r) { var f = filled(r), s = 0; f.forEach(function (h) { s += h.p; }); return s / f.length * 18; });
+      var W = 340, H = 150, pl = 30, pr = 16, pt = 18, pb = 26;
+      var lo = Math.floor(Math.min.apply(null, vals) - 1), hi = Math.ceil(Math.max.apply(null, vals) + 1);
+      var X = function (i) { return pl + i * (W - pl - pr) / (vals.length - 1); };
+      var Y = function (v) { return pt + (hi - v) / (hi - lo) * (H - pt - pb); };
+      var pts = vals.map(function (v, i) { return X(i).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ');
+      var lv = vals[vals.length - 1];
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="라운드별 18홀 기준 퍼팅 수 추이, 최근 ' + lv.toFixed(1) + '">' +
+        '<line x1="' + pl + '" y1="' + (H - pb) + '" x2="' + (W - pr) + '" y2="' + (H - pb) + '" stroke="#dfe5df"/>' +
+        '<text x="' + (pl - 6) + '" y="' + (Y(hi) + 4) + '" font-size="11" text-anchor="end" fill="#5d6a62">' + hi + '</text>' +
+        '<text x="' + (pl - 6) + '" y="' + (Y(lo) + 4) + '" font-size="11" text-anchor="end" fill="#5d6a62">' + lo + '</text>' +
+        '<polyline points="' + pts + '" fill="none" stroke="#0a4a35" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+        vals.map(function (v, i) { return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (i === vals.length - 1 ? 5 : 3) + '" fill="' + (i === vals.length - 1 ? '#c9a227' : '#0a4a35') + '"/>'; }).join('') +
+        '<text x="' + X(vals.length - 1).toFixed(1) + '" y="' + (Y(lv) - 10).toFixed(1) + '" font-size="12" font-weight="700" text-anchor="end" fill="#0a4a35">' + lv.toFixed(1) + '</text>' +
+        '<text x="' + pl + '" y="' + (H - 8) + '" font-size="11" fill="#5d6a62">' + esc(fmtDate(last[0].date)) + '</text>' +
+        '<text x="' + (W - pr) + '" y="' + (H - 8) + '" font-size="11" text-anchor="end" fill="#5d6a62">' + esc(fmtDate(last[last.length - 1].date)) + '</text></svg>';
+      $('trend').innerHTML = svg;
+    }
+
+    // 목록
+    var list = done.slice().reverse();
+    $('history').innerHTML = list.length ? list.map(function (r) {
+      var f = filled(r), s = 0; f.forEach(function (h) { s += h.p; });
+      return '<div class="item"><div><b>' + esc(r.course) + '</b><div class="sub">' + esc(fmtDate(r.date)) + ' · ' + f.length + '홀 · 퍼팅 ' + s + '개</div></div>' +
+        '<button class="del" data-id="' + r.id + '" aria-label="' + esc(r.course) + ' 기록 삭제">삭제</button></div>';
+    }).join('') : '<div class="empty">아직 마친 라운드가 없습니다.</div>';
+  }
+  $('history').addEventListener('click', function (e) {
+    var b = e.target.closest('.del'); if (!b) return;
+    if (!confirm('이 라운드 기록을 삭제할까요?')) return;
+    var id = Number(b.dataset.id);
+    rounds = rounds.filter(function (r) { return r.id !== id; }); save(); renderStats();
+  });
+
+  function render() {
+    var r = cur();
+    $('startCard').classList.toggle('hidden', !!r);
+    $('entryCard').classList.toggle('hidden', !r);
+    if (r) {
+      var first = r.holes.findIndex(function (h) { return !h || !h.p; });
+      gotoHole(first < 0 ? r.holes.length - 1 : first);
+    } else { $('course').value = ''; $('date').value = today(); $('holeCount').value = '18'; }
+    renderStats();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
