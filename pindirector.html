@@ -729,8 +729,22 @@ function liveCheckStable() {
   const sign = $('invSensor').checked ? -1 : 1;
   const p = (live.b - sensor.zb) * sign, r = (live.g - sensor.zg) * sign;
   const t = liveText(p, r);
-  $('sensorStatus').textContent = '✓ 측정 완료 · ' + t.replace(/퍼센트/g, '%') + ' — 맞으면 "이 값으로 입력"을 누르세요.';
-  speakKo('측정 완료. ' + t);
+  /* 측정값을 입력칸에 넣고 계산 → 거리·방향까지 함께 안내 */
+  const ap = Math.abs(Math.tan(p * Math.PI / 180) * 100), sp = Math.abs(Math.tan(r * Math.PI / 180) * 100);
+  $('alongDir').value = p >= 0 ? 'up' : 'down'; $('alongPct').value = ap.toFixed(1); syncAlong('pct');
+  $('sideDir').value = r >= 0 ? 'left' : 'right'; $('sidePct').value = sp.toFixed(1);
+  calculate();
+  let calcShow = '', calcSay = '';
+  if (curD() > 0) {
+    const dist = $('resDistance').textContent.replace(/\s*m$/, '');
+    const aim = ($('resAim').childNodes[0] ? $('resAim').childNodes[0].textContent : '').replace(/[←→]/g, '').replace(/\s+/g, ' ').trim();
+    calcShow = ' → 쳐야 할 거리 ' + dist + 'm, 에임 ' + aim;
+    calcSay = '. 계산 결과, 쳐야 할 거리 ' + dist + '미터, 에임은 ' + aim.replace(/ 컵$/, '컵');
+  } else {
+    calcSay = '. 거리를 입력하면 계산 결과도 알려드립니다';
+  }
+  $('sensorStatus').textContent = '✓ 측정 완료 · ' + t.replace(/퍼센트/g, '%') + calcShow;
+  speakKo('측정 완료. ' + t + calcSay);
   try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) {}
 }
 function liveRender() {
