@@ -1095,7 +1095,7 @@ const APP = [
 function tParams() {
   if (tMode === 'app') {
     const a = APP[+$('aSize').value], k = +$('aSpeed').value / 100, rest = parseFloat($('tRest').value);
-    const back = a.b[0] + (a.b[1] - a.b[0]) * k, fwd = a.f[0] + (a.f[1] - a.f[0]) * k;
+    const back = a.b[1] - (a.b[1] - a.b[0]) * k, fwd = a.f[1] - (a.f[1] - a.f[0]) * k;
     return { total: back + fwd, back, fwd, rest, lead: READY_HOLD, cycle: READY_HOLD + back + fwd + rest };
   }
   const total = parseFloat($('tTotal').value), rb = parseFloat($('tRatio').value), rest = parseFloat($('tRest').value);
