@@ -129,7 +129,17 @@ input[type=range]::-moz-range-track{background:transparent}
 </style>
 </head>
 <body>
-<style>.sitenav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;margin:0 0 12px;font:700 13px "Pretendard","Noto Sans KR",system-ui,sans-serif}.sitenav a{color:#0a4a35;text-decoration:none;padding:7px 12px;border:1px solid #c3c7ca;border-radius:999px;background:linear-gradient(180deg,#fdfdfd,#e6e8e8)}.sitenav a.home{color:#fff6d6;border:2px solid #c9a227;background:linear-gradient(180deg,#0f5d42,#06352a)}.sitenav a:focus-visible{outline:2px solid #c9a227;outline-offset:2px}[hidden]{display:none!important}</style>
+<style>.sitenav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;margin:0 0 12px;font:700 13px "Pretendard","Noto Sans KR",system-ui,sans-serif}.sitenav a{color:#0a4a35;text-decoration:none;padding:7px 12px;border:1px solid #c3c7ca;border-radius:999px;background:linear-gradient(180deg,#fdfdfd,#e6e8e8)}.sitenav a.home{color:#fff6d6;border:2px solid #c9a227;background:linear-gradient(180deg,#0f5d42,#06352a)}.sitenav a:focus-visible{outline:2px solid #c9a227;outline-offset:2px}[hidden]{display:none!important}.dg-stats{display:flex;gap:6px;margin-top:10px}
+.dg-stats div{flex:1;background:#f3f8f3;border:1px solid #dbe7db;border-radius:10px;padding:8px 4px;text-align:center}
+.dg-stats span{display:block;font-size:.68rem;color:#6a7d6a}
+.dg-stats b{display:block;font-size:.88rem;color:var(--primary-dark);margin-top:2px}
+.dg-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:.72rem;color:#555}
+.dg-legend i{display:inline-block;vertical-align:middle;margin-right:5px}
+.lg-path{width:22px;height:6px;border-radius:3px;background:linear-gradient(90deg,#ff7043,#fff59d);border:1px solid rgba(0,0,0,.25)}
+.lg-aim{width:10px;height:10px;background:#ff9800;transform:rotate(45deg);border:1px solid #fff;box-shadow:0 0 0 1px #ef6c00}
+.lg-stop{width:10px;height:10px;border-radius:50%;border:1.5px dashed #555;background:rgba(255,255,255,.6)}
+.lg-flow{font-style:normal;color:#1565c0;font-size:.9rem;line-height:1}
+</style>
 <div class="container">
 <nav class="sitenav" aria-label="사이트 메뉴"><a class="home" href="index.html">← Pin Director 홈</a><a href="aimpoint.html">에임포인트 계산기 →</a></nav>
   <div class="header">
@@ -267,7 +277,15 @@ input[type=range]::-moz-range-track{background:transparent}
     <div class="card" id="diagramCard" style="display:none">
       <h3>예측 라인</h3>
       <div id="diagram"></div>
-      <div class="cap">위에서 본 그림 · 좌우 폭은 보기 좋게 확대되어 있습니다.<br>점선 = 출발 방향(에임), 실선 = 공의 예상 경로</div>
+      <button type="button" class="btn fill" id="btnPlay" style="width:100%;margin-top:10px">▶ 볼 굴려보기</button>
+      <div class="dg-stats" id="dgStats"></div>
+      <div class="dg-legend">
+        <span><i class="lg-path"></i>예상 경로 (밝을수록 빠름)</span>
+        <span><i class="lg-aim"></i>에임 지점·출발 방향</span>
+        <span><i class="lg-stop"></i>안 들어갔을 때 멈추는 곳</span>
+        <span><i class="lg-flow">➜</i>경사 흐름</span>
+      </div>
+      <div class="cap" id="dgNote"></div>
     </div>
 
     <div class="card" id="compareCard" style="display:none">
@@ -562,7 +580,7 @@ function calculate() {
   if (!res.sim.crossed) msgs.push('이 조건에서는 공이 홀컵 거리에 못 미칠 수 있습니다.');
   if (msgs.length) { warn.innerHTML = msgs.join('<br>'); warn.style.display = 'block'; }
 
-  drawDiagram(res, inp.D);
+  drawDiagram(res, inp.D, inp);
   buildCompare(inp, overSel);
 }
 
@@ -577,34 +595,162 @@ function buildCompare(inp, sel) {
   $('compareCard').style.display = 'block';
 }
 
-function drawDiagram(res, D) {
-  const W = 300, H = 360, padT = 36, padB = 36, cx = W / 2;
-  const yMaxM = D + 0.8;
-  const ys = (H - padT - padB) / yMaxM;
-  const pts = res.sim.path.filter(p => p[1] <= yMaxM);
-  const maxX = Math.max(0.2, Math.abs(res.aimOff), ...pts.map(p => Math.abs(p[0])));
-  const xs = Math.min(110 / (maxX * 1.15), ys * 6);
-  const X = m => (cx + m * xs).toFixed(1), Y = m => (H - padB - m * ys).toFixed(1);
-  const holeY = Y(D);
-  const poly = pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ');
-  const aimX = X(res.aimOff);
+/* ---- 예측 라인 (위에서 본 그림 + 볼 굴려보기) ---- */
+let diagAnim = { raf: 0 }, diagCache = null;
+function dgLerp(a, b, t) { return Math.round(a + (b - a) * t); }
+function dgColor(f) {            // f: 0(느림) ~ 1(빠름)
+  const c0 = [255, 112, 67], c1 = [255, 245, 157];
+  return 'rgb(' + dgLerp(c0[0], c1[0], f) + ',' + dgLerp(c0[1], c1[1], f) + ',' + dgLerp(c0[2], c1[2], f) + ')';
+}
+function dgArrow(x, y, ang, len, col, op) {
+  const h = len * 0.38;
+  return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${ang.toFixed(1)})" opacity="${op}">
+    <line x1="${-len / 2}" y1="0" x2="${len / 2 - 2}" y2="0" stroke="${col}" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="${len / 2},0 ${len / 2 - h * 1.3},${-h} ${len / 2 - h * 1.3},${h}" fill="${col}"/></g>`;
+}
+function drawDiagram(res, D, inp) {
+  cancelAnimationFrame(diagAnim.raf);
+  const W = 320, H = 440, padT = 58, padB = 44, padL = 38, padR = 14;
+  const sim = res.sim, P = res.P;
+  const plotW = W - padL - padR, plotH = H - padT - padB, cx = padL + plotW / 2;
+  const yMaxM = Math.min(Math.max(D + 0.8, sim.stopY + 0.3), D + 2.5);
+  const ys = plotH / yMaxM;
+  const all = sim.path.filter(p => p[1] <= yMaxM && p[1] >= -0.05);
+  const maxX = Math.max(0.2, Math.abs(res.aimOff), ...all.map(p => Math.abs(p[0])));
+  const xs = Math.min((plotW / 2 * 0.86) / maxX, ys * 6);
+  const exag = xs / ys;
+  const X = m => cx + m * xs, Y = m => H - padB - m * ys;
+  const holeX = cx, holeY = Y(D), aimX = X(res.aimOff);
   const hasBreak = Math.abs(res.aimOff) > 0.02;
+  const cupR = Math.max(6, CUP / 2 * xs);
+
+  // 속도별 색 구간
+  const sp = [0];
+  for (let i = 1; i < all.length; i++) sp.push(Math.hypot(all[i][0] - all[i - 1][0], all[i][1] - all[i - 1][1]) / 0.02);
+  sp[0] = sp[1] || 0;
+  const vmax = Math.max(...sp, 0.01);
+  let segs = '';
+  const CH = 6;
+  for (let i = 0; i < all.length - 1; i += CH) {
+    const j = Math.min(i + CH, all.length - 1);
+    let s = 0; for (let k = i; k <= j; k++) s += sp[k];
+    const f = Math.min(1, (s / (j - i + 1)) / vmax);
+    segs += `<polyline points="${all.slice(i, j + 1).map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ')}" fill="none" stroke="${dgColor(f)}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  const full = all.map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
+
+  // 거리 눈금
+  const step = D <= 6 ? 1 : D <= 12 ? 2 : 5;
+  let grid = '';
+  for (let m = 0; m <= yMaxM + 1e-6; m += step) {
+    const yy = Y(m);
+    grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W - padR}" y2="${yy.toFixed(1)}" stroke="#fff" stroke-opacity=".5" stroke-dasharray="3 4"/>
+      <text x="${padL - 6}" y="${(yy + 3.5).toFixed(1)}" font-size="10" text-anchor="end" fill="#47684a">${m}m</text>`;
+  }
+
+  // 경사 흐름 화살표 (공이 흘러가는 방향)
+  let flow = '';
+  const fm = Math.hypot(P.aX, P.aY);
+  if (fm > 0.01) {
+    const ang = Math.atan2(-P.aY, P.aX) * 180 / Math.PI;
+    for (const fx of [-0.62, 0, 0.62]) for (const fy of [0.2, 0.5, 0.8]) {
+      flow += dgArrow(cx + fx * plotW / 2, padT + plotH * fy, ang, 18, '#1565c0', 0.28);
+    }
+  }
+
+  // 최대 휨 지점
+  let apex = null;
+  for (const p of all) if (p[1] <= D && (!apex || Math.abs(p[0]) > Math.abs(apex[0]))) apex = p;
+  let apexSvg = '';
+  const halo = 'paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round"';
+  if (apex && Math.abs(apex[0]) > 0.03) {
+    const ax = X(apex[0]), ay = Y(apex[1]), right = apex[0] > 0;
+    apexSvg = `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="4.5" fill="#fff" stroke="#e65100" stroke-width="2"/>
+      <text x="${(ax + (right ? -9 : 9)).toFixed(1)}" y="${(ay + 4).toFixed(1)}" font-size="11" font-weight="700" fill="#bf360c" text-anchor="${right ? 'end' : 'start'}" ${halo}>최대 휨 ${(Math.abs(apex[0]) * 100).toFixed(0)}cm</text>`;
+  }
+
+  // 공이 멈추는 위치
+  let stopSvg = '';
+  if (sim.stopY <= yMaxM) {
+    const sx = X(sim.stopX), sy = Y(sim.stopY), dcm = Math.abs(sim.stopY - D) * 100;
+    stopSvg = `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="5" fill="#fff" fill-opacity=".55" stroke="#555" stroke-dasharray="2 2"/>`;
+  }
+
+  // 에임 표시
+  let aimSvg = '';
+  if (hasBreak) {
+    const cmv = Math.abs(res.aimOff) * 100, lx = Math.min(aimX, holeX), rx = Math.max(aimX, holeX);
+    aimSvg = `
+      <line x1="${cx}" y1="${Y(0).toFixed(1)}" x2="${aimX.toFixed(1)}" y2="${holeY.toFixed(1)}" stroke="#ff9800" stroke-width="2" stroke-dasharray="6 4"/>
+      <line x1="${lx.toFixed(1)}" y1="${(holeY + 16).toFixed(1)}" x2="${rx.toFixed(1)}" y2="${(holeY + 16).toFixed(1)}" stroke="#ef6c00" stroke-width="1.5"/>
+      <line x1="${lx.toFixed(1)}" y1="${(holeY + 11).toFixed(1)}" x2="${lx.toFixed(1)}" y2="${(holeY + 21).toFixed(1)}" stroke="#ef6c00" stroke-width="1.5"/>
+      <line x1="${rx.toFixed(1)}" y1="${(holeY + 11).toFixed(1)}" x2="${rx.toFixed(1)}" y2="${(holeY + 21).toFixed(1)}" stroke="#ef6c00" stroke-width="1.5"/>
+      <text x="${((lx + rx) / 2).toFixed(1)}" y="${(holeY + 31).toFixed(1)}" font-size="10" font-weight="700" text-anchor="middle" fill="#bf360c" ${halo}>${cmv.toFixed(0)}cm</text>
+      <polygon points="${aimX.toFixed(1)},${(holeY - 9).toFixed(1)} ${(aimX + 7).toFixed(1)},${holeY.toFixed(1)} ${aimX.toFixed(1)},${(holeY + 9).toFixed(1)} ${(aimX - 7).toFixed(1)},${holeY.toFixed(1)}" fill="#ff9800" stroke="#fff" stroke-width="1.6"/>
+      <text x="${aimX.toFixed(1)}" y="${(holeY - 14).toFixed(1)}" font-size="11" font-weight="700" text-anchor="middle" fill="#bf360c" ${halo}>에임</text>`;
+  }
+
+  // 경사 안내 배지
+  const aP = inp ? inp.alongPct : 0, sP = inp ? inp.sidePct : 0;
+  const alongTxt = aP < 0.05 ? '앞뒤 평지' : (inp.alongDir === 'up' ? '▲ 오르막 ' : '▼ 내리막 ') + aP.toFixed(1) + '%';
+  const sideTxt = sP < 0.05 ? '좌우 평지' : (inp.sideDir === 'left' ? '◀ 왼쪽 높음 ' : '오른쪽 높음 ▶ ') + (sP.toFixed ? sP.toFixed(1) : sP) + '%';
+
   const svg = `
-<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#e8f3e8"/>
-  <line x1="${cx}" y1="${Y(0)}" x2="${cx}" y2="${holeY}" stroke="#9bbf9b" stroke-width="1"/>
-  <line x1="${cx}" y1="${Y(0)}" x2="${aimX}" y2="${holeY}" stroke="#ff9800" stroke-width="2" stroke-dasharray="5 4"/>
-  <polyline points="${poly}" fill="none" stroke="#2e7d32" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="${cx}" cy="${holeY}" r="7" fill="#1b1b1b"/>
-  ${hasBreak ? `<circle cx="${aimX}" cy="${holeY}" r="5" fill="#ff9800" stroke="#fff" stroke-width="1.5"/>
-  <text x="${aimX}" y="${(parseFloat(holeY) - 12).toFixed(1)}" font-size="11" text-anchor="middle" fill="#b45309" font-weight="700">에임</text>` : ''}
-  <text x="${cx}" y="${(parseFloat(holeY) + 22).toFixed(1)}" font-size="11" text-anchor="middle" fill="#333">홀컵 ${D.toFixed(1)}m</text>
-  <circle cx="${cx}" cy="${Y(0)}" r="6" fill="#fff" stroke="#555" stroke-width="1.5"/>
-  <text x="12" y="20" font-size="11" fill="#777">◀ 좌</text>
-  <text x="${W - 12}" y="20" font-size="11" fill="#777" text-anchor="end">우 ▶</text>
+<svg id="dgSvg" viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="예측 라인">
+  <defs>
+    <pattern id="mow" width="44" height="10" patternUnits="userSpaceOnUse"><rect width="22" height="10" fill="#d4ebd1"/><rect x="22" width="22" height="10" fill="#c9e5c6"/></pattern>
+    <radialGradient id="cupG" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#2b2b2b"/></radialGradient>
+  </defs>
+  <rect x="0" y="0" width="${W}" height="${H}" rx="14" fill="#9fcf9a"/>
+  <rect x="${padL - 4}" y="${padT - 14}" width="${plotW + 8}" height="${plotH + 28}" rx="10" fill="url(#mow)"/>
+  ${grid}
+  <line x1="${cx}" y1="${Y(0).toFixed(1)}" x2="${cx}" y2="${holeY.toFixed(1)}" stroke="#4d7c4d" stroke-opacity=".55" stroke-width="1.2"/>
+  ${flow}
+  <polyline points="${full}" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"/>
+  ${segs}
+  ${aimSvg}
+  ${stopSvg}
+  ${apexSvg}
+  <circle cx="${holeX}" cy="${holeY.toFixed(1)}" r="${(cupR + 2.5).toFixed(1)}" fill="#fff" fill-opacity=".9"/>
+  <circle cx="${holeX}" cy="${holeY.toFixed(1)}" r="${cupR.toFixed(1)}" fill="url(#cupG)"/>
+  <text x="${holeX}" y="${(holeY - cupR - 8).toFixed(1)}" font-size="11" font-weight="700" text-anchor="middle" fill="#1b3a1b" ${halo}>홀컵 ${D.toFixed(1)}m</text>
+  <circle cx="${cx}" cy="${(Y(0) + 1.5).toFixed(1)}" r="7" fill="rgba(0,0,0,.25)"/>
+  <circle cx="${cx}" cy="${Y(0).toFixed(1)}" r="6.5" fill="#fff" stroke="#444" stroke-width="1.5"/>
+  <circle id="dgBall" cx="${cx}" cy="${Y(0).toFixed(1)}" r="6.5" fill="#fff" stroke="#e65100" stroke-width="2.4" visibility="hidden"/>
+  <text x="${cx}" y="${(Y(0) + 22).toFixed(1)}" font-size="10" text-anchor="middle" fill="#1b3a1b" ${halo}>공</text>
+  <text x="${padL}" y="18" font-size="10" fill="#47684a">◀ 좌</text>
+  <text x="${W - padR}" y="18" font-size="10" fill="#47684a" text-anchor="end">우 ▶</text>
+  <rect x="${cx - 112}" y="24" width="224" height="22" rx="11" fill="#fff" fill-opacity=".92" stroke="#bcd5bc"/>
+  <text x="${cx}" y="39" font-size="11" font-weight="700" text-anchor="middle" fill="#1b5e20">${alongTxt} · ${sideTxt}</text>
 </svg>`;
   $('diagram').innerHTML = svg;
+
+  // 통계/범례
+  const vH = sim.crossed ? sim.vAtD : 0;
+  $('dgStats').innerHTML =
+    `<div><span>최대 휨</span><b>${apex ? (Math.abs(apex[0]) * 100).toFixed(0) : 0} cm</b></div>` +
+    `<div><span>홀 통과 속도</span><b>${sim.crossed ? vH.toFixed(2) + ' m/s' : '-'}</b></div>` +
+    `<div><span>홀까지 시간</span><b>${res.T.toFixed(1)} 초</b></div>` +
+    `<div><span>못 넣으면</span><b style="white-space:nowrap;font-size:.8rem">${sim.stopY >= D ? '홀 뒤' : '홀 앞'} ${(Math.abs(sim.stopY - D) * 100).toFixed(0)}cm</b></div>`;
+  $('dgNote').innerHTML = (hasBreak || (apex && Math.abs(apex[0]) > 0.03)) ? `위에서 본 그림 · 좌우 폭은 약 <b>${exag.toFixed(1)}배</b> 확대되어 있습니다.` : '위에서 본 그림';
   $('diagramCard').style.display = 'block';
+
+  diagCache = { pts: all.map(p => [X(p[0]), Y(p[1])]) };
+}
+function playBall() {
+  if (!diagCache) return;
+  const b = $('dgBall'); if (!b) return;
+  cancelAnimationFrame(diagAnim.raf);
+  const pts = diagCache.pts, DT = 20;
+  const total = (pts.length - 1) * DT, k = Math.max(1, total / 9000);
+  const t0 = performance.now();
+  b.setAttribute('visibility', 'visible');
+  const stepf = now => {
+    const i = Math.min(pts.length - 1, Math.floor((now - t0) / (DT * k)));
+    b.setAttribute('cx', pts[i][0].toFixed(1)); b.setAttribute('cy', pts[i][1].toFixed(1));
+    if (i < pts.length - 1) diagAnim.raf = requestAnimationFrame(stepf);
+  };
+  diagAnim.raf = requestAnimationFrame(stepf);
 }
 
 /* ---------------- 높이 차 ↔ 경사도 환산 ---------------- */
@@ -1110,6 +1256,8 @@ updateTempoUI();
 calculate();
 refreshRanges();
 </script>
-<script>(function(){function go(){var t=(location.hash||'').slice(1);try{if(!t){t=localStorage.getItem('pd_tab')||'';localStorage.removeItem('pd_tab');}}catch(e){}var b=t&&document.querySelector('.tab[data-tab="'+t+'"]');if(b)b.click();}go();window.addEventListener('hashchange',go);})();</script>
+<script>(function(){function go(){var t=(location.hash||'').slice(1);try{if(!t){t=localStorage.getItem('pd_tab')||'';localStorage.removeItem('pd_tab');}}catch(e){}var b=t&&document.querySelector('.tab[data-tab="'+t+'"]');if(b)b.click();}go();window.addEventListener('hashchange',go);})();
+$('btnPlay').addEventListener('click', playBall);
+</script>
 </body>
 </html>
