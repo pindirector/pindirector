@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pin Director 그린 리딩 · 템포 연습</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
 :root{
   --primary:#2e7d32; --primary-dark:#1b5e20; --bg:#f2f4f2; --card:#fff;
@@ -126,6 +127,118 @@ input[type=range]::-moz-range-track{background:transparent}
 .header img{mix-blend-mode:multiply}
 .footer .copy{margin-top:6px;font-size:.72rem;color:#aaa}
 [hidden]{display:none!important}
+</style>
+<style>
+/* ===== 프리미엄 마감 (고급 톤 다듬기) ===== */
+:root{
+  --ink:#1b1f1c; --paper:#faf8f2; --hair:rgba(10,74,53,.18);
+  --gold-1:#f6e2a0; --gold-2:#d4af37; --gold-3:#8a6a16;
+  --shadow-sm:0 1px 2px rgba(10,30,20,.06),0 1px 1px rgba(10,30,20,.04);
+  --shadow-md:0 8px 24px rgba(8,40,28,.12),0 2px 6px rgba(8,40,28,.08);
+  --shadow-gold:0 10px 26px rgba(138,106,22,.18);
+}
+body{
+  font-family:"Pretendard","Noto Sans KR",-apple-system,BlinkMacSystemFont,system-ui,Roboto,sans-serif;
+  background:
+    radial-gradient(1100px 500px at 50% -8%, #eef3ec 0%, transparent 60%),
+    linear-gradient(180deg,#fbfbf7 0%,#eef1eb 55%,#e7ece6 100%);
+  color:var(--ink);
+  letter-spacing:.01em;
+}
+.container{max-width:470px}
+.header{position:relative;padding-bottom:16px;margin-bottom:18px}
+.header::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:64px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold-2),transparent)}
+.header img{filter:drop-shadow(0 1px 1px rgba(0,0,0,.08))}
+
+/* 탭: 상자형 → 정제된 리본형 */
+.tabs{background:#fff;border:1px solid var(--hair);border-radius:14px;padding:5px;gap:4px;
+  box-shadow:var(--shadow-sm)}
+.tab{border:none;border-radius:10px;background:transparent;box-shadow:none;color:#5c655f;
+  font-weight:700;letter-spacing:.01em;transition:background .15s,color .15s}
+.tab.active{color:#fff6d6;background:linear-gradient(165deg,#13634a 0%,#0a4a35 55%,#062e22 100%);
+  box-shadow:0 4px 10px rgba(6,46,33,.32),inset 0 1px 0 rgba(255,255,255,.14)}
+
+/* 패널: 테두리 가늘게, 그림자 깊게 */
+.panel{border:1px solid var(--hair);border-radius:16px;box-shadow:var(--shadow-md)}
+.phead{position:relative;background:linear-gradient(170deg,#146a4f 0%,#0a4a35 50%,#072e22 100%);
+  border-bottom:none;box-shadow:0 2px 0 var(--gold-2),0 3px 0 rgba(0,0,0,.08);
+  letter-spacing:.06em;font-weight:700;padding:16px 12px}
+.pbody{padding:18px 16px 20px}
+
+/* 안내 배지: 채움 → 가는 골드 라인 카드 */
+.instruction{background:#fff;border:1px solid var(--hair);border-left:3px solid var(--gold-2);
+  color:#2c3a31;border-radius:10px;text-align:left;font-weight:500;line-height:1.5}
+.dg-aim{background:#fff;border:1px solid var(--hair);border-left:3px solid var(--gold-2);color:#5a3f06}
+
+/* 버튼: 얇은 골드 라인 + 미세한 하이라이트 */
+button.btn,button.btn.fill,.startbtn{
+  border:1.5px solid var(--gold-2);
+  background:linear-gradient(170deg,#146a4f 0%,#0a4a35 55%,#072e22 100%);
+  color:#fbf1cf;box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.12);
+  border-radius:11px;font-weight:700;transition:box-shadow .15s,transform .05s}
+button.btn:active,.startbtn:active{transform:translateY(1px);box-shadow:none}
+.startbtn{box-shadow:var(--shadow-gold),inset 0 1px 0 rgba(255,255,255,.14)}
+.startbtn.run{background:linear-gradient(170deg,#9c2a22 0%,#6e1510 100%);border-color:#e7b2ac}
+
+/* 입력칸: 정제된 보더 + 포커스 골드 링 */
+select,input[type=number]{border:1px solid #d7dcd4;border-radius:10px;background:#fff;
+  transition:box-shadow .15s,border-color .15s}
+select:focus,input[type=number]:focus{outline:none;border-color:var(--gold-2);
+  box-shadow:0 0 0 3px rgba(212,175,55,.18)}
+.input-group label,.crlab{color:#5c655f;font-weight:700;letter-spacing:.01em}
+.sec{color:#0a4a35;position:relative;padding-left:12px}
+.sec::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;border-radius:2px;
+  background:linear-gradient(180deg,var(--gold-1),var(--gold-3))}
+
+/* 세그먼트/칩: 더 고급스러운 금속 톤 */
+.seg button,.chips button,.seg.two button{border:1px solid #d7dcd4;border-radius:10px;
+  background:#fff;box-shadow:none;color:#5c655f}
+.seg button.on,.chips button.on,.seg.two button.on{color:#fbf1cf;border:1.5px solid var(--gold-2);
+  background:linear-gradient(170deg,#146a4f,#072e22);box-shadow:0 3px 8px rgba(6,46,33,.28)}
+
+/* 결과 카드: 코너 장식 + 골드 숫자 */
+.result{position:relative;background:linear-gradient(175deg,#146a4f 0%,#0a4a35 45%,#062e22 100%);
+  border:1px solid var(--gold-2);box-shadow:var(--shadow-gold),inset 0 1px 0 rgba(255,255,255,.08)}
+.result::before,.result::after{content:"";position:absolute;width:14px;height:14px;
+  border:1.5px solid var(--gold-1);opacity:.85}
+.result::before{left:10px;top:10px;border-right:none;border-bottom:none}
+.result::after{right:10px;bottom:10px;border-left:none;border-top:none}
+.result h2{letter-spacing:.08em;font-weight:700;color:#fbf1cf}
+.rv{background:linear-gradient(180deg,#fff3c4,#d4af37 70%,#a9821f);-webkit-background-clip:text;
+  background-clip:text;color:transparent;filter:drop-shadow(0 1px 0 rgba(0,0,0,.25))}
+.mini div{background:rgba(255,255,255,.08);border:1px solid rgba(246,226,160,.22)}
+
+/* 카드/표: 가는 라인, 차분한 음영 */
+.card{border:1px solid var(--hair);box-shadow:var(--shadow-sm);border-radius:14px}
+.card h3{font-weight:700;letter-spacing:.01em;position:relative;padding-left:12px}
+.card h3::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;border-radius:2px;
+  background:linear-gradient(180deg,var(--gold-1),var(--gold-3))}
+th{border-bottom:1.5px solid var(--gold-2)!important;font-weight:700;letter-spacing:.02em}
+td{border-bottom:1px solid #ecefe9}
+tr.sel td,#aTbl tr.sel td{background:#f5f1e2}
+
+/* 슬라이더: 차분한 금속 손잡이 */
+input[type=range]{height:6px;background:linear-gradient(90deg,#0a4a35 0,#0a4a35 var(--p,50%),#e3e6df var(--p,50%),#e3e6df 100%)}
+input[type=range]::-webkit-slider-thumb{width:22px;height:22px;
+  background:radial-gradient(circle at 35% 30%,#fff7df,#d4af37 60%,#8a6a16);
+  border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;
+  background:radial-gradient(circle at 35% 30%,#fff7df,#d4af37 60%,#8a6a16);border:2px solid #fff}
+
+/* 상태/안내 텍스트 */
+.status{color:#5c655f}
+.tip{color:#fbf1cf}
+.warn{background:#fdf4e3;border:1px solid #ecd79a;color:#7a5209;border-radius:10px}
+
+/* 홈 네비 */
+.sitenav a{border:1px solid #d7dcd4;background:#fff;color:#0a4a35;font-weight:700;box-shadow:var(--shadow-sm)}
+.sitenav a.home{border:1.5px solid var(--gold-2);background:linear-gradient(170deg,#146a4f,#072e22);color:#fbf1cf}
+
+/* 푸터: 가는 금선 구분 */
+.footer{position:relative;padding-top:18px;color:#8a8f89}
+.footer::before{content:"";position:absolute;left:50%;top:0;transform:translateX(-50%);width:80px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-2),transparent)}
 </style>
 </head>
 <body>
