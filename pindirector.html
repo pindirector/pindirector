@@ -278,8 +278,6 @@ input[type=range]::-moz-range-track{background:transparent}
       <h3>예측 라인</h3>
       <div id="diagram"></div>
       <button type="button" class="btn fill" id="btnPlay" style="width:100%;margin-top:10px">▶ 볼 굴려보기</button>
-      <button type="button" class="btn" id="btnAR" style="width:100%;margin-top:8px">📷 AR로 보기 (실험 기능)</button>
-      <div class="cap" id="arMsg" style="text-align:left"></div>
       <div class="dg-stats" id="dgStats"></div>
       <div class="dg-legend">
         <span><i class="lg-path"></i>예상 경로 (밝을수록 빠름)</span>
@@ -737,7 +735,7 @@ function drawDiagram(res, D, inp) {
   $('dgNote').innerHTML = (hasBreak || (apex && Math.abs(apex[0]) > 0.03)) ? `위에서 본 그림 · 좌우 폭은 약 <b>${exag.toFixed(1)}배</b> 확대되어 있습니다.` : '위에서 본 그림';
   $('diagramCard').style.display = 'block';
 
-  diagCache = { pts: all.map(p => [X(p[0]), Y(p[1])]), res, D };
+  diagCache = { pts: all.map(p => [X(p[0]), Y(p[1])]) };
 }
 function playBall() {
   if (!diagCache) return;
@@ -1260,138 +1258,6 @@ refreshRanges();
 </script>
 <script>(function(){function go(){var t=(location.hash||'').slice(1);try{if(!t){t=localStorage.getItem('pd_tab')||'';localStorage.removeItem('pd_tab');}}catch(e){}var b=t&&document.querySelector('.tab[data-tab="'+t+'"]');if(b)b.click();}go();window.addEventListener('hashchange',go);})();
 $('btnPlay').addEventListener('click', playBall);
-
-/* ---------------- AR 간이 보기 (카메라 + 센서, 실험 기능) ---------------- */
-const AR = { on: false, stream: null, raf: 0, h: null, locked: false, have: false, hasHead: false, pitch: 0, head: 0, h0: 0, camH: 1.4, fov: 63 };
-function arWrap(a) { a %= 360; if (a > 180) a -= 360; if (a < -180) a += 360; return a; }
-function arEnsureDom() {
-  if ($('arView')) return;
-  const d = document.createElement('div');
-  d.id = 'arView';
-  d.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:9999;background:#000;display:none;touch-action:none;overflow:hidden';
-  const btn = 'border:0;border-radius:12px;padding:12px 16px;font-size:1rem;font-weight:700;color:#fff;background:rgba(6,53,42,.92)';
-  d.innerHTML = `
-    <video id="arVideo" playsinline muted autoplay style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover"></video>
-    <canvas id="arCanvas" style="position:absolute;left:0;top:0;width:100%;height:100%"></canvas>
-    <div id="arCross" style="position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:none">
-      <div style="position:absolute;left:22px;top:0;width:2px;height:46px;background:#fff;box-shadow:0 0 3px #000"></div>
-      <div style="position:absolute;top:22px;left:0;height:2px;width:46px;background:#fff;box-shadow:0 0 3px #000"></div></div>
-    <div style="position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) max(12px,env(safe-area-inset-left,0px)) 0;display:flex;gap:10px;align-items:center">
-      <button id="arClose" style="${btn};padding:8px 14px">✕ 닫기</button>
-      <div id="arStatus" style="flex:1;color:#fff;font-size:.8rem;font-weight:700;text-shadow:0 0 4px #000,0 0 4px #000"></div></div>
-    <div style="position:absolute;left:0;right:0;bottom:0;padding:0 max(12px,env(safe-area-inset-left,0px)) calc(env(safe-area-inset-bottom,0px) + 12px)">
-      <div id="arHint" style="color:#fff;font-size:.82rem;text-align:center;margin-bottom:8px;text-shadow:0 0 4px #000,0 0 4px #000"></div>
-      <div id="arTune" style="display:none;background:rgba(0,0,0,.55);border-radius:12px;padding:8px 12px;margin-bottom:8px;color:#fff;font-size:.75rem">
-        <div style="display:flex;align-items:center;gap:8px">화각 <input type="range" id="arFov" min="50" max="80" step="1" value="63" style="flex:1"><span id="arFovV" style="width:36px">63°</span></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">폰 높이 <input type="range" id="arHt" min="0.9" max="2" step="0.05" value="1.4" style="flex:1"><span id="arHtV" style="width:36px">1.40m</span></div></div>
-      <div style="display:flex;gap:10px"><button id="arLock" style="${btn};flex:1">홀 고정</button></div></div>`;
-  document.body.appendChild(d);
-  $('arClose').addEventListener('click', arClose);
-  $('arLock').addEventListener('click', arLock);
-  $('arFov').addEventListener('input', () => { AR.fov = +$('arFov').value; $('arFovV').textContent = AR.fov + '°'; });
-  $('arHt').addEventListener('input', () => { AR.camH = +$('arHt').value; $('arHtV').textContent = AR.camH.toFixed(2) + 'm'; arStatus(); });
-}
-function arStatus() {
-  if (!AR.locked) return;
-  $('arStatus').textContent = '홀컵 ' + diagCache.D.toFixed(1) + 'm · 폰 높이 ' + AR.camH.toFixed(2) + 'm';
-}
-function arLock() {
-  if (!AR.have) { $('arHint').textContent = '센서 값을 읽는 중입니다. 잠시 후 다시 눌러 주세요.'; return; }
-  if (AR.locked) { AR.locked = false; $('arCross').style.display = 'block'; $('arTune').style.display = 'none'; $('arLock').textContent = '홀 고정'; $('arStatus').textContent = ''; $('arHint').textContent = '홀컵을 십자선에 맞추고 [홀 고정]을 누르세요.'; return; }
-  if (AR.pitch < 3 || AR.pitch > 80) { $('arHint').textContent = '홀컵이 화면 가운데에 오도록 폰을 아래로 적당히 숙여 주세요.'; return; }
-  const D = diagCache.D;
-  AR.camH = Math.min(2, Math.max(0.9, D * Math.tan(AR.pitch * Math.PI / 180)));
-  AR.h0 = AR.head; AR.locked = true;
-  $('arHt').value = AR.camH; $('arHtV').textContent = AR.camH.toFixed(2) + 'm';
-  $('arCross').style.display = 'none'; $('arTune').style.display = 'block'; $('arLock').textContent = '다시 고정';
-  $('arHint').textContent = AR.hasHead ? '폰 방향을 바꾸면 라인이 따라옵니다. 어긋나면 [다시 고정]' : '이 기기는 방향 센서가 없어 폰을 좌우로 돌리면 라인이 따라오지 않습니다.';
-  arStatus();
-}
-async function arOpen() {
-  arEnsureDom();
-  const msg = $('arMsg'); msg.textContent = '';
-  if (!diagCache || !diagCache.res || !(diagCache.D > 0)) { msg.textContent = '먼저 직선 거리를 입력해 계산 결과를 만든 뒤 눌러 주세요.'; return; }
-  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { msg.textContent = '이 브라우저는 카메라를 쓸 수 없습니다. (HTTPS 주소의 사파리·크롬에서 열어 주세요)'; return; }
-  if (!(await askPermission())) { msg.textContent = '센서 권한이 필요합니다. 허용 후 다시 눌러 주세요.'; return; }
-  try { AR.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
-  catch (e) { msg.textContent = '카메라 권한이 필요합니다. 브라우저 설정에서 허용해 주세요.'; return; }
-  const v = $('arVideo'); v.srcObject = AR.stream; try { await v.play(); } catch (e) {}
-  AR.have = false; AR.locked = false; AR.hasHead = false;
-  AR.h = e => {
-    if (e.beta == null) return;
-    const pitch = 90 - e.beta;
-    const head = e.webkitCompassHeading != null ? e.webkitCompassHeading : (e.alpha != null ? (360 - e.alpha) : null);
-    if (!AR.have) { AR.pitch = pitch; AR.head = head || 0; AR.have = true; AR.hasHead = head != null; }
-    else { AR.pitch += (pitch - AR.pitch) * 0.35; if (head != null) AR.head += arWrap(head - AR.head) * 0.35; }
-  };
-  window.addEventListener('deviceorientation', AR.h);
-  AR.on = true;
-  $('arView').style.display = 'block';
-  $('arCross').style.display = 'block'; $('arTune').style.display = 'none';
-  $('arLock').textContent = '홀 고정'; $('arStatus').textContent = '';
-  $('arHint').textContent = '공 위에서 폰을 가슴 높이로 들고, 홀컵을 십자선에 맞춘 뒤 [홀 고정]을 누르세요.';
-  cancelAnimationFrame(AR.raf); arFrame();
-}
-function arClose() {
-  AR.on = false; AR.locked = false; cancelAnimationFrame(AR.raf);
-  if (AR.h) window.removeEventListener('deviceorientation', AR.h); AR.h = null;
-  if (AR.stream) AR.stream.getTracks().forEach(t => t.stop()); AR.stream = null;
-  const v = $('arVideo'); if (v) v.srcObject = null;
-  if ($('arView')) $('arView').style.display = 'none';
-}
-function arFrame() {
-  if (!AR.on) return;
-  AR.raf = requestAnimationFrame(arFrame);
-  const cv = $('arCanvas'), W = cv.clientWidth, H = cv.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
-  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-  if (!AR.locked || !AR.have) return;
-  const res = diagCache.res, D = diagCache.D, h = AR.camH;
-  const th = AR.pitch * Math.PI / 180, ps = AR.hasHead ? arWrap(AR.head - AR.h0) * Math.PI / 180 : 0;
-  const sT = Math.sin(th), cT = Math.cos(th), sP = Math.sin(ps), cP = Math.cos(ps);
-  const F = (H / 2) / Math.tan(AR.fov * Math.PI / 360);
-  const proj = (x, y) => {
-    const xc = x * cP - y * sP;
-    const zc = x * sP * cT + y * cP * cT + h * sT;
-    const yc = x * sP * sT + y * cP * sT - h * cT;
-    return zc < 0.2 ? null : [W / 2 + F * xc / zc, H / 2 - F * yc / zc];
-  };
-  const stroke = (pts, color, width, dash) => {
-    g.beginPath(); let pen = false;
-    for (const q of pts) { const p = proj(q[0], q[1]); if (!p) { pen = false; continue; } if (!pen) { g.moveTo(p[0], p[1]); pen = true; } else g.lineTo(p[0], p[1]); }
-    g.setLineDash(dash || []); g.lineWidth = width; g.strokeStyle = color; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); g.setLineDash([]);
-  };
-  const label = (txt, p, color) => {
-    if (!p) return; g.font = '700 13px -apple-system,system-ui,sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(txt, p[0], p[1]); g.fillStyle = color || '#fff'; g.fillText(txt, p[0], p[1]);
-  };
-  // 직선(공→홀) + 1m 눈금
-  const straight = []; for (let s = 0; s <= 1.0001; s += 0.02) straight.push([0, D * s]);
-  stroke(straight, 'rgba(0,0,0,.45)', 5, [10, 8]); stroke(straight, 'rgba(255,255,255,.9)', 2.5, [10, 8]);
-  for (let m = 1; m < D; m++) { const p = proj(0, m); if (p) { g.fillStyle = '#fff'; g.beginPath(); g.arc(p[0], p[1], 3, 0, 7); g.fill(); if (D <= 12 || m % 2 === 0) label(m + 'm', [p[0] + 18, p[1] + 4]); } }
-  // 에임 선
-  const aim = []; for (let s = 0; s <= 1.0001; s += 0.02) aim.push([res.aimOff * s, D * s]);
-  const hasBreak = Math.abs(res.aimOff) > 0.02;
-  if (hasBreak) { stroke(aim, 'rgba(0,0,0,.45)', 5, [6, 6]); stroke(aim, '#ffb300', 2.5, [6, 6]); }
-  // 예상 경로
-  const path = []; for (const q of res.sim.path) { if (q[1] > D + 0.6) break; if (q[1] >= 0) path.push(q); }
-  stroke(path, 'rgba(0,0,0,.55)', 9); stroke(path, '#ffeb3b', 5.5);
-  // 홀컵
-  g.beginPath(); let first = true;
-  for (let a = 0; a <= 6.3; a += 0.3) { const p = proj(0.108 * Math.cos(a), D + 0.108 * Math.sin(a)); if (!p) continue; if (first) { g.moveTo(p[0], p[1]); first = false; } else g.lineTo(p[0], p[1]); }
-  g.closePath(); g.fillStyle = 'rgba(0,0,0,.65)'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke();
-  const hp = proj(0, D); if (hp) label('홀컵 ' + D.toFixed(1) + 'm', [hp[0] + (hasBreak ? (res.aimOff < 0 ? 46 : -46) : 0), hp[1] - 18]);
-  // 에임 지점
-  if (hasBreak) {
-    const ap = proj(res.aimOff, D);
-    if (ap) {
-      g.beginPath(); g.moveTo(ap[0], ap[1] - 12); g.lineTo(ap[0] + 9, ap[1]); g.lineTo(ap[0], ap[1] + 12); g.lineTo(ap[0] - 9, ap[1]); g.closePath();
-      g.fillStyle = '#ff9800'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#fff'; g.stroke();
-      label('에임 ' + (res.aimOff < 0 ? '왼쪽 ' : '오른쪽 ') + Math.abs(res.aimOff * 100).toFixed(0) + 'cm', [ap[0], ap[1] - 20], '#ffcc80');
-    }
-  }
-}
-
-$('btnAR').addEventListener('click', arOpen);
 </script>
 </body>
 </html>
