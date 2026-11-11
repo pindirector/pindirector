@@ -160,6 +160,7 @@ input[type=range]::-moz-range-track{background:transparent}
         <div style="flex:1"><div style="font-size:.72rem;color:var(--muted)">좌우 (사이드)</div><div id="liveSide" style="font-size:1.4rem;font-weight:900;color:var(--primary)">-</div></div>
       </div>
       <button class="btn fill" id="btnLock" style="width:100%;margin-top:10px">이 값으로 입력</button>
+      <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-size:.8rem;color:var(--muted)"><input type="checkbox" id="liveVoice" checked> 측정이 끝나면 음성으로 알려주기</label>
     </div>
 
     <div class="input-group">
@@ -689,7 +690,49 @@ async function runSensor(kind) {
   calculate();
 }
 $('btnZero').addEventListener('click', () => runSensor('zero'));
-const live = { on: false, has: false, b: 0, g: 0, p: 0, r: 0, h: null, raf: 0 };
+const live = { on: false, has: false, b: 0, g: 0, p: 0, r: 0, h: null, raf: 0, buf: [], armed: true, ab: 0, ag: 0 };
+/* 음성 안내 */
+try { if (localStorage.getItem('pdVoice') === '0') $('liveVoice').checked = false; } catch (e) {}
+$('liveVoice').addEventListener('change', () => { try { localStorage.setItem('pdVoice', $('liveVoice').checked ? '1' : '0'); } catch (e) {} });
+function speakKo(text) {
+  try {
+    if (!('speechSynthesis' in window) || !$('liveVoice').checked) return;
+    const ss = window.speechSynthesis; ss.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR'; u.rate = 0.95;
+    const v = ss.getVoices().find(x => /^ko/i.test(x.lang)); if (v) u.voice = v;
+    ss.speak(u);
+  } catch (e) {}
+}
+function unlockSpeech() { try { if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch (e) {} }
+function liveText(p, r) {
+  const ap = Math.abs(Math.tan(p * Math.PI / 180) * 100), sp = Math.abs(Math.tan(r * Math.PI / 180) * 100);
+  const a = ap < 0.05 ? '앞뒤는 평지' : (p >= 0 ? '오르막 ' : '내리막 ') + ap.toFixed(1) + '퍼센트';
+  const b = sp < 0.05 ? '좌우는 평지' : (r >= 0 ? '왼쪽이 높음 ' : '오른쪽이 높음 ') + sp.toFixed(1) + '퍼센트';
+  return a + ', ' + b;
+}
+/* 값이 1.3초 동안 거의 움직이지 않으면 '측정 완료'로 보고 음성 안내 */
+const STABLE_MS = 1300, STABLE_DEG = 0.35, REARM_DEG = 1.0;
+function liveCheckStable() {
+  const now = performance.now();
+  live.buf.push({ t: now, b: live.b, g: live.g });
+  while (live.buf.length && now - live.buf[0].t > STABLE_MS + 200) live.buf.shift();
+  if (!live.armed) {
+    if (Math.abs(live.b - live.ab) > REARM_DEG || Math.abs(live.g - live.ag) > REARM_DEG) { live.armed = true; live.buf = []; }
+    return;
+  }
+  if (live.buf.length < 5 || now - live.buf[0].t < STABLE_MS) return;
+  let b0 = 1e9, b1 = -1e9, g0 = 1e9, g1 = -1e9;
+  for (const q of live.buf) { b0 = Math.min(b0, q.b); b1 = Math.max(b1, q.b); g0 = Math.min(g0, q.g); g1 = Math.max(g1, q.g); }
+  if (b1 - b0 > STABLE_DEG || g1 - g0 > STABLE_DEG) return;
+  live.armed = false; live.ab = live.b; live.ag = live.g;
+  const sign = $('invSensor').checked ? -1 : 1;
+  const p = (live.b - sensor.zb) * sign, r = (live.g - sensor.zg) * sign;
+  const t = liveText(p, r);
+  $('sensorStatus').textContent = '✓ 측정 완료 · ' + t.replace(/퍼센트/g, '%') + ' — 맞으면 "이 값으로 입력"을 누르세요.';
+  speakKo('측정 완료. ' + t);
+  try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) {}
+}
 function liveRender() {
   live.raf = 0; if (!live.has) return;
   const sign = $('invSensor').checked ? -1 : 1;
@@ -700,25 +743,27 @@ function liveRender() {
 }
 function liveStop() {
   if (live.h) window.removeEventListener('deviceorientation', live.h);
-  live.h = null; live.on = false; live.has = false;
+  live.h = null; live.on = false; live.has = false; live.buf = []; live.armed = true;
+  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
   $('liveBox').style.display = 'none'; $('btnMeasure').textContent = '센서로 실시간 측정';
 }
 async function liveStart() {
   const st = $('sensorStatus');
   if (!(await askPermission())) { st.textContent = '센서 권한이 필요합니다. (HTTPS 주소에서 사용하세요)'; return; }
-  live.has = false;
+  live.has = false; live.buf = []; live.armed = true;
   live.h = e => {
     if (e.beta == null || e.gamma == null) return;
     if (!live.has) { live.b = e.beta; live.g = e.gamma; live.has = true; }
     else { live.b += (e.beta - live.b) * 0.2; live.g += (e.gamma - live.g) * 0.2; }
     if (!live.raf) live.raf = requestAnimationFrame(liveRender);
+    liveCheckStable();
   };
   window.addEventListener('deviceorientation', live.h);
   live.on = true; $('liveBox').style.display = 'block'; $('btnMeasure').textContent = '측정 중지';
-  st.textContent = '폰을 그린에 놓고 값이 안정되면 "이 값으로 입력"을 누르세요.';
+  st.textContent = '폰을 그린에 놓고 잠시 가만히 두세요. 값이 안정되면 음성으로 알려드립니다.';
   setTimeout(() => { if (live.on && !live.has) { st.textContent = '센서 값을 읽을 수 없습니다. (지원 안 되거나 HTTPS가 아닐 수 있습니다)'; liveStop(); } }, 2500);
 }
-$('btnMeasure').addEventListener('click', () => live.on ? liveStop() : liveStart());
+$('btnMeasure').addEventListener('click', () => { if (live.on) liveStop(); else { unlockSpeech(); liveStart(); } });
 $('btnLock').addEventListener('click', () => {
   if (!live.has) return;
   const ap = Math.abs(Math.tan(live.p * Math.PI / 180) * 100), sp = Math.abs(Math.tan(live.r * Math.PI / 180) * 100);
